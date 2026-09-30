@@ -1,0 +1,62 @@
+{
+  "tracker_html": "<!-- bundled unit/integration fixture; not a live-source snapshot -->",
+  "records": [
+    {
+      "row": {
+        "state_name": "Illinois",
+        "identifier_raw": "SB 3735",
+        "year": 2026,
+        "source_category": "Student Data Privacy & AI",
+        "source_status": "In Committee",
+        "key_requirement": "Protects student data from AI collection or processing",
+        "research_record_url": "https://www.ailawsbystate.com/law/IL/sb-3735"
+      },
+      "detail": {
+        "title": "IL SB 3735: Student data privacy and artificial intelligence.",
+        "official_source_url": "https://www.ilga.gov/Legislation/BillStatus?DocNum=3735&DocTypeID=SB&GAID=18&LegId=167016&SessionID=114",
+        "source_status": "In Committee",
+        "last_action_date": "2026-09-18",
+        "last_verified_date": "2026-09-20",
+        "data_updated_date": "2026-09-24"
+      }
+    },
+    {
+      "row": {
+        "state_name": "District of Columbia",
+        "identifier_raw": "B26-0491",
+        "year": 2025,
+        "source_category": "Generative AI in Classrooms",
+        "source_status": "Introduced",
+        "key_requirement": "Regulates generative AI use in educational settings",
+        "research_record_url": "https://www.ailawsbystate.com/law/DC/b26-0491"
+      },
+      "detail": {
+        "title": "DC B26-0491: Artificial intelligence in education.",
+        "official_source_url": "https://lims.dccouncil.gov/Legislation/B26-0491",
+        "source_status": "Introduced",
+        "last_action_date": "2026-09-01",
+        "last_verified_date": "2026-09-20",
+        "data_updated_date": "2026-09-24"
+      }
+    },
+    {
+      "row": {
+        "state_name": "Florida",
+        "identifier_raw": "S1194",
+        "year": 2026,
+        "source_category": "AI Literacy & Curriculum",
+        "source_status": "Dead",
+        "key_requirement": "Requires AI literacy education or curriculum standards",
+        "research_record_url": "https://www.ailawsbystate.com/law/FL/s1194"
+      },
+      "detail": {
+        "title": "FL S1194: Artificial intelligence literacy.",
+        "official_source_url": "https://www.flsenate.gov/Session/Bill/2026/1194",
+        "source_status": "Dead",
+        "last_action_date": "2026-05-01",
+        "last_verified_date": "2026-09-20",
+        "data_updated_date": "2026-09-24"
+      }
+    }
+  ]
+}

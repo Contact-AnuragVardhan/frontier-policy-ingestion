@@ -83,8 +83,26 @@ def load_to_supabase(csv_path: Path, apply: bool) -> int:
     return 0
 
 
+
+def run_ai_laws_education(
+    *,
+    source_url: str | None = None,
+    existing_csv: Path | None = None,
+    fixture_path: Path | None = None,
+    timeout: int = 30,
+) -> int:
+    from app.ai_laws_pipeline import run_ai_laws_ingestion
+
+    exit_code, _ = run_ai_laws_ingestion(
+        source_url=source_url or config.AI_LAWS_EDUCATION_SOURCE_URL,
+        existing_csv=existing_csv,
+        fixture_path=fixture_path,
+        timeout=timeout,
+    )
+    return exit_code
+
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Frontier Education Project policy ingestion")
+    parser = argparse.ArgumentParser(description="AI Choice EdTech Map policy ingestion")
     sub = parser.add_subparsers(dest="command", required=True)
 
     ingest = sub.add_parser(
@@ -95,6 +113,35 @@ def main() -> int:
         "--use-fixture",
         action="store_true",
         help="Use the bundled Apr 9 source snapshot instead of fetching the website",
+    )
+
+    ai_laws = sub.add_parser(
+        "ingest-ai-laws-education",
+        help=(
+            "Fetch/normalize the AI Laws by State Education AI Tracker and generate "
+            "review artifacts only; never writes production Supabase."
+        ),
+    )
+    ai_laws.add_argument(
+        "--source-url",
+        default=None,
+        help="Override the Education AI Tracker URL (normally not needed).",
+    )
+    ai_laws.add_argument(
+        "--existing-csv",
+        default=None,
+        help="Existing policies.csv snapshot to use for duplicate/conflict comparison.",
+    )
+    ai_laws.add_argument(
+        "--fixture",
+        default=None,
+        help="Use a local AI Laws fixture JSON instead of the live source (tests/review only).",
+    )
+    ai_laws.add_argument(
+        "--timeout",
+        type=int,
+        default=30,
+        help="HTTP timeout in seconds per request (default: 30).",
     )
 
     load = sub.add_parser("load-supabase", help="Upsert generated policies.csv into public.policies")
@@ -108,6 +155,13 @@ def main() -> int:
     args = parser.parse_args()
     if args.command == "ingest-multistate":
         return build_outputs(args.use_fixture)
+    if args.command == "ingest-ai-laws-education":
+        return run_ai_laws_education(
+            source_url=args.source_url,
+            existing_csv=Path(args.existing_csv) if args.existing_csv else None,
+            fixture_path=Path(args.fixture) if args.fixture else None,
+            timeout=args.timeout,
+        )
     if args.command == "load-supabase":
         return load_to_supabase(Path(args.file), args.apply)
     return 2

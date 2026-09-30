@@ -1,8 +1,16 @@
 from collections import Counter
+from datetime import date, datetime
 from urllib.parse import urlparse
 
 from app.models import PolicyRecord
-from app.normalize import ALLOWED_CATEGORIES, ALLOWED_POLICY_TYPES, ALLOWED_STATUS_GROUPS
+from app.normalize import (
+    ALLOWED_CATEGORIES,
+    ALLOWED_POLICY_TYPES,
+    ALLOWED_STATUS_GROUPS,
+    STATE_CODES,
+)
+
+VALID_JURISDICTION_CODES = set(STATE_CODES.values()) | {"DC"}
 
 
 def _valid_url(value: str | None) -> bool:
@@ -12,13 +20,35 @@ def _valid_url(value: str | None) -> bool:
     return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
 
 
+def _valid_iso_date(value: str | None) -> bool:
+    if not value:
+        return True
+    try:
+        date.fromisoformat(value[:10])
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
+def _valid_iso_timestamp(value: str | None) -> bool:
+    if not value:
+        return True
+    try:
+        datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return True
+    except (TypeError, ValueError):
+        # A source-supported calendar date is also accepted for timestamptz; Postgres
+        # will interpret it at midnight when the SQL is reviewed/imported.
+        return _valid_iso_date(value)
+
+
 def validate_records(records: list[PolicyRecord]) -> tuple[list[str], dict]:
     errors: list[str] = []
     seen: set[tuple[str, str, str]] = set()
 
     for index, record in enumerate(records, start=1):
         prefix = f"row {index} ({record.title})"
-        if len(record.state_code) != 2 or not record.state_code.isupper():
+        if record.state_code not in VALID_JURISDICTION_CODES:
             errors.append(f"{prefix}: invalid state_code {record.state_code!r}")
         if not record.state_name.strip():
             errors.append(f"{prefix}: state_name is required")
@@ -45,12 +75,24 @@ def validate_records(records: list[PolicyRecord]) -> tuple[list[str], dict]:
             errors.append(f"{prefix}: status_detail is required")
         if not _valid_url(record.source_url):
             errors.append(f"{prefix}: invalid source_url {record.source_url!r}")
+        elif "ailawsbystate.com" in urlparse(record.source_url).netloc.lower():
+            errors.append(f"{prefix}: source_url must be an official source, not AI Laws by State")
         if record.research_source_url and not _valid_url(record.research_source_url):
             errors.append(f"{prefix}: invalid research_source_url {record.research_source_url!r}")
         if not record.status_as_of_date:
             errors.append(f"{prefix}: status_as_of_date is required")
+        elif not _valid_iso_date(record.status_as_of_date):
+            errors.append(f"{prefix}: invalid status_as_of_date {record.status_as_of_date!r}")
         if not record.last_updated:
             errors.append(f"{prefix}: last_updated is required")
+        elif not _valid_iso_date(record.last_updated):
+            errors.append(f"{prefix}: invalid last_updated {record.last_updated!r}")
+        if record.research_source_date and not _valid_iso_date(record.research_source_date):
+            errors.append(f"{prefix}: invalid research_source_date {record.research_source_date!r}")
+        if record.effective_date and not _valid_iso_date(record.effective_date):
+            errors.append(f"{prefix}: invalid effective_date {record.effective_date!r}")
+        if record.last_verified_at and not _valid_iso_timestamp(record.last_verified_at):
+            errors.append(f"{prefix}: invalid last_verified_at {record.last_verified_at!r}")
 
         key = (record.state_code, record.policy_identifier, record.source_url)
         if key in seen:

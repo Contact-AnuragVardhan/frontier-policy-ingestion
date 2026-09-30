@@ -1,12 +1,16 @@
-# Frontier Policy Ingestion v2
+# AI Choice Policy Ingestion
 
-Standalone **offline** data-preparation project for the Frontier Education Project **EdTech Map**.
+Standalone **offline** data-preparation project for the AI Choice **EdTech Map**.
 
-It consumes the source Julia supplied for the map:
+It owns the structured policy ingestion sources for the map:
 
-- MultiState — **How States Are Regulating AI in Education this Legislative Session**
-- Source date: **2026-04-09**
-- URL: `https://www.multistate.us/insider/2026/4/9/how-states-are-regulating-ai-in-education-this-legislative-session`
+1. MultiState — **How States Are Regulating AI in Education this Legislative Session** (source snapshot: **2026-04-09**)
+2. AI Laws by State — **Education AI Tracker**
+
+Source URLs:
+
+- `https://www.multistate.us/insider/2026/4/9/how-states-are-regulating-ai-in-education-this-legislative-session`
+- `https://www.ailawsbystate.com/tools/education-ai-tracker`
 
 This project is separate from the React/Vite UI, Node/Express runtime backend, and chatbot RAG ingestion project.
 
@@ -69,7 +73,7 @@ No OpenAI call is required for this ingestion.
 Windows PowerShell:
 
 ```powershell
-cd frontier-policy-ingestion-v2
+cd frontier-policy-ingestion
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
@@ -191,7 +195,7 @@ last_verified_at      = null
 
 That means: *this status is supported by the Julia-provided April 9 source snapshot.* It does not claim Frontier independently checked each official bill page on the day the ingestion script ran.
 
-When Frontier later re-checks an official source, `last_verified_at` can be populated and the relevant status/date fields can be updated through a verification workflow.
+When AI Choice later re-checks an official source, `last_verified_at` can be populated and the relevant status/date fields can be updated through a verification workflow.
 
 ## Tests
 
@@ -208,3 +212,134 @@ app/sources/
 ```
 
 Normalize it into `PolicyRecord`. Do not put source scraping/parsing into the React frontend or runtime Express server.
+
+
+# AI Laws by State — Education AI Tracker
+
+
+Julia supplied the public **AI Laws by State — Education AI Tracker** as an additional research source for the existing EdTech Map. It is additive to MultiState and uses a separate adapter; the MultiState parser is not mixed with or replaced by this source.
+
+Source:
+
+```text
+https://www.ailawsbystate.com/tools/education-ai-tracker
+```
+
+## First-run review command
+
+```powershell
+python -m app.cli ingest-ai-laws-education
+```
+
+Optional explicit existing-policy snapshot for duplicate/conflict comparison:
+
+```powershell
+python -m app.cli ingest-ai-laws-education --existing-csv ".\output\policies.csv"
+```
+
+Offline fixture run used for tests/review:
+
+```powershell
+python -m app.cli ingest-ai-laws-education --fixture ".\data\fixtures\ai_laws_education\sample.json"
+```
+
+This command **never writes to Supabase**. It fetches/normalizes the source, compares it with the existing MultiState dataset, validates it, and writes review artifacts under `output/`. SQL is generated only if there are no blocking validation/review errors.
+
+Generated artifacts:
+
+```text
+output/ai_laws_education_raw.html
+output/ai_laws_education_raw.json
+output/ai_laws_education_normalized.csv
+output/ai_laws_education_review.csv
+output/ai_laws_education_validation.json
+output/ai_laws_education_duplicates.csv
+output/ai_laws_education_conflicts.csv
+output/ai_laws_education_source_metadata.json
+output/ai_laws_education_ingestion_report.md
+output/ai_laws_education.sql   # only when validation fully passes
+```
+
+## Normalization and provenance rules
+
+- `research_source_name` is `AI Laws by State — Education AI Tracker`.
+- `research_source_url` prefers the specific AI Laws record page.
+- `source_url` must be an external official government/legislative source; the aggregator URL is never substituted.
+- `Key Requirement` is used as the concise summary; the ingestion does not generate new legal conclusions.
+- Existing AI Choice categories are retained. Source categories are normalized deterministically. For generic `Teacher Use of AI / PD` rows, the public detail-page title is used as a second source-supported signal; rows still ambiguous after that check remain review-only.
+- `Introduced`, `In Committee`, `Passed One Chamber`, and `Passed Both Chambers` map to `Pending`; `Enacted` remains `Enacted`; terminal `Dead`/`Dead/Failed`/`Failed`/`Vetoed` map to `Inactive`; `Unknown` remains `Unknown`.
+- The exact source status is preserved in `status_detail`.
+- `effective_date` is populated only when the detail page explicitly exposes an effective date.
+- Deduplication primarily uses normalized `state_code + policy_identifier`; explicit official-source year/session evidence is used only when needed. Known odd/even two-year session handling prevents false year conflicts for NY/WA/CA. The MultiState research snapshot date is never treated as a bill year.
+- Existing MultiState provenance is preserved. Duplicate matches are review-only and are excluded from generated SQL. Duplicate/conflict outputs include merge recommendations; no incoming value automatically overwrites an existing reviewed record.
+- District of Columbia is supported as `DC`. Federal tracker rows are retained in review output but are not eligible for the state/DC map.
+- If the tracker publishes a total such as `Showing N of N bills`, the extracted row count must match or validation blocks SQL generation.
+- The ingestion also performs a conservative source-consistency check between tracker year/category/requirement and the public detail title/official-source URL. Suspicious but structurally valid rows become `POSSIBLE_MATCH_REVIEW` instead of `NEW`.
+
+Full mapping and review rules are documented in:
+
+```text
+docs/ai_laws_education_mapping.md
+```
+
+## Important repository boundary
+
+The supplied archive contains the ingestion/database schema code but not the deployed Node policy API or React EdTech Map source. No frontend/backend code is changed here. Before production import, verify the deployed API/UI handles `Inactive`, `Unknown`, and `DC` as intended.
+
+### Reviewed AI Laws dispositions
+
+`ingest-ai-laws-education` now has a separate post-review disposition layer in
+`app/ai_laws_review_resolutions.py`. It does not weaken the generic parser. Explicitly
+verified rows can receive a reviewed category mapping, while reviewed bad-source rows,
+federal rows, and tracker/detail title mismatches are retained in CSV/JSON review artifacts
+and excluded from SQL. The review CSV includes `review_disposition` and
+`review_resolution_note` for auditability.
+
+SQL is generated only for `NEW` records that pass DB validation and are not excluded. A
+reviewed exclusion does not block SQL for other clean records; an unresolved review item still
+does. The command never writes to production Supabase.
+
+### Bill identity consistency gate
+
+The AI Laws Education adapter also cross-checks the identity encoded in the AI Laws detail URL against the official-government title returned by the detail page. Rows with conflicting subject matter (for example a school bill title paired with a political-advertising or autonomous-vehicle detail identity) are classified for manual review and are not SQL-eligible. A separate scope guard also holds rows whose official title is clearly centered on a non-education domain even when it contains AI/privacy terminology. These are conservative review gates; they do not rewrite or infer legal content.
+
+### Reviewed bill-identity / scope exclusions
+
+The bill-identity safety pass may deliberately stop SQL generation when an AI Laws detail
+record resolves to an official bill whose identity or subject matter does not align with the
+Education AI Tracker record.  After manual review of the 2026-09-28 live snapshot, those
+specific rows are recorded in `REVIEWED_IDENTITY_SCOPE_EXCLUDES` in
+`app/ai_laws_review_resolutions.py`.
+
+They remain present in normalized/review outputs for auditability, but receive either
+`EXCLUDE_BILL_IDENTITY_MISMATCH` or `EXCLUDE_NON_EDUCATION_SCOPE` and are never emitted to
+SQL.  This list is identifier-specific; future newly detected mismatches are still unresolved
+blockers until reviewed rather than being silently excluded.
+
+### Reused bill-number/session safety
+
+The AI Laws adapter also compares the tracker `Year` with the bill detail page's
+`Last Action` date. A gap greater than one year is treated as a bill-identity review
+because state bill numbers are routinely reused across legislative sessions. This
+protects against a tracker row or detail page silently resolving to a different bill
+with the same number. Normal same-year and adjacent-year legislative-session activity
+remains allowed. Reviewed session collisions stay in review artifacts and are excluded
+from generated SQL.
+
+### K-12 scope and tracker Year handling
+
+The Education AI Tracker's `Year` value is retained as source metadata, but it is not used as a legislative-session identifier. Live records can use a year that aligns with an effective date or otherwise differs from the bill session. Bill identity is instead checked using the AI Laws detail identity and the official source/title.
+
+Because AI Choice's EdTech Map is K-12 scoped, clearly postsecondary-only and professional-licensing-only records are kept in review artifacts but excluded from generated SQL. Mixed measures that explicitly cover K-12 schools or school districts remain eligible.
+
+## Refresh procedure
+
+Refresh the structured map sources independently and review each source before any database load:
+
+```powershell
+python -m app.cli ingest-multistate
+python -m app.cli ingest-ai-laws-education --existing-csv ".\output\policies.csv"
+pytest -q
+```
+
+The first command refreshes the reviewed MultiState snapshot outputs. The second refreshes AI Laws by State and compares incoming records against the current MultiState `policies.csv` before generating its review/conflict artifacts. Review `validation.json`, `policies_review.csv`, and the `ai_laws_education_*` review files before any manual load. `ingest-ai-laws-education` never writes to Supabase.

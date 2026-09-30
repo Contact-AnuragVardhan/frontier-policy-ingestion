@@ -15,3 +15,11 @@ FIXTURE_PATH = ROOT / "data" / "fixtures" / "multistate_2026_04_09.json"
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
 SUPABASE_SECRET_KEY = os.getenv("SUPABASE_SECRET_KEY", "")
+
+
+# AI Laws by State — Education AI Tracker.
+AI_LAWS_EDUCATION_SOURCE_URL = os.getenv(
+    "AI_LAWS_EDUCATION_SOURCE_URL",
+    "https://www.ailawsbystate.com/tools/education-ai-tracker",
+)
+AI_LAWS_EDUCATION_FIXTURE_PATH = ROOT / "data" / "fixtures" / "ai_laws_education" / "sample.json"
