@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.env
+output/*.csv
+output/*.sql
+output/*.json
+output/*.md
+!output/.gitkeep
