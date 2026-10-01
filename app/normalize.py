@@ -6,6 +6,7 @@ ALLOWED_CATEGORIES = {
     "Parental Consent",
     "AI Literacy",
     "School Procurement",
+    "Universal School Choice",
 }
 ALLOWED_POLICY_TYPES = {"Bill", "Law", "Regulation", "Guidance", "Other"}
 ALLOWED_STATUS_GROUPS = {"Pending", "Enacted", "Active", "Inactive", "Unknown"}

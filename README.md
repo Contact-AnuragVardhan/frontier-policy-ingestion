@@ -1,16 +1,18 @@
 # AI Choice Policy Ingestion
 
-Standalone **offline** data-preparation project for the AI Choice **EdTech Map**.
+Standalone **offline** data-preparation project for the **AI Choice Map**.
 
 It owns the structured policy ingestion sources for the map:
 
 1. MultiState — **How States Are Regulating AI in Education this Legislative Session** (source snapshot: **2026-04-09**)
 2. AI Laws by State — **Education AI Tracker**
+3. EdChoice — **School Choice in America Dashboard** (`Universal=Full` only for the `Universal School Choice` category)
 
 Source URLs:
 
 - `https://www.multistate.us/insider/2026/4/9/how-states-are-regulating-ai-in-education-this-legislative-session`
 - `https://www.ailawsbystate.com/tools/education-ai-tracker`
+- `https://www.edchoice.org/school-choice/dashboard/`
 
 This project is separate from the React/Vite UI, Node/Express runtime backend, and chatbot RAG ingestion project.
 
@@ -217,7 +219,7 @@ Normalize it into `PolicyRecord`. Do not put source scraping/parsing into the Re
 # AI Laws by State — Education AI Tracker
 
 
-Julia supplied the public **AI Laws by State — Education AI Tracker** as an additional research source for the existing EdTech Map. It is additive to MultiState and uses a separate adapter; the MultiState parser is not mixed with or replaced by this source.
+Julia supplied the public **AI Laws by State — Education AI Tracker** as an additional research source for the existing AI Choice Map. It is additive to MultiState and uses a separate adapter; the MultiState parser is not mixed with or replaced by this source.
 
 Source:
 
@@ -284,7 +286,7 @@ docs/ai_laws_education_mapping.md
 
 ## Important repository boundary
 
-The supplied archive contains the ingestion/database schema code but not the deployed Node policy API or React EdTech Map source. No frontend/backend code is changed here. Before production import, verify the deployed API/UI handles `Inactive`, `Unknown`, and `DC` as intended.
+The supplied archive contains the ingestion/database schema code but not the deployed Node policy API or React AI Choice Map source. No frontend/backend code is changed here. Before production import, verify the deployed API/UI handles `Inactive`, `Unknown`, and `DC` as intended.
 
 ### Reviewed AI Laws dispositions
 
@@ -330,7 +332,85 @@ from generated SQL.
 
 The Education AI Tracker's `Year` value is retained as source metadata, but it is not used as a legislative-session identifier. Live records can use a year that aligns with an effective date or otherwise differs from the bill session. Bill identity is instead checked using the AI Laws detail identity and the official source/title.
 
-Because AI Choice's EdTech Map is K-12 scoped, clearly postsecondary-only and professional-licensing-only records are kept in review artifacts but excluded from generated SQL. Mixed measures that explicitly cover K-12 schools or school districts remain eligible.
+Because the AI Choice Map is K-12 scoped, clearly postsecondary-only and professional-licensing-only records are kept in review artifacts but excluded from generated SQL. Mixed measures that explicitly cover K-12 schools or school districts remain eligible.
+
+# EdChoice — Universal School Choice
+
+The AI Choice Map now supports the exact normalized category:
+
+```text
+Universal School Choice
+```
+
+EdChoice is additive to MultiState and AI Laws by State. It is not copied into chatbot/document RAG; the map and chatbot continue to consume structured policy rows from the existing `policies` dataset.
+
+Research source:
+
+```text
+https://www.edchoice.org/school-choice/dashboard/
+```
+
+## Review command
+
+Live dashboard review:
+
+```powershell
+python -m app.cli ingest-edchoice-universal-school-choice --existing-csv ".\output\policies.csv"
+```
+
+Offline source-supported fixture review:
+
+```powershell
+python -m app.cli ingest-edchoice-universal-school-choice --fixture ".\data\fixtures\edchoice_school_choice\sample.json" --existing-csv ".\output\policies.csv"
+```
+
+The live command first looks for the dashboard's server-rendered table. If the dashboard table is client-rendered and absent from the HTML response, it automatically falls back to EdChoice's first-party `Universal School Choice` page. A fallback program qualifies only when its state is listed by EdChoice as **Truly Universal** and the same EdChoice program URL appears under **Universal Eligibility**, **Universal Options**, and **Universal Funding**.
+
+If both first-party HTML paths become unavailable or ambiguous, do not scrape visual cards. Export/copy the dashboard table to CSV and use the manual review path:
+
+```powershell
+python -m app.cli ingest-edchoice-universal-school-choice `
+  --input-csv ".\data\edchoice_dashboard_export.csv" `
+  --source-date "2026-08-27" `
+  --existing-csv ".\output\policies.csv"
+```
+
+Primary qualification remains dashboard `Universal=Full`. In automatic fallback mode, the Universal School Choice page supplies equivalent first-party classification evidence using the rule above. `Eligibility`, `N/A`, and other dashboard values are not broadened into Universal School Choice.
+
+Generated artifacts:
+
+```text
+output/edchoice_universal_school_choice_raw.html
+output/edchoice_universal_school_choice_universal_page_raw.html
+output/edchoice_universal_school_choice_raw.json
+output/edchoice_universal_school_choice_normalized.csv
+output/edchoice_universal_school_choice_review.csv
+output/edchoice_universal_school_choice_validation.json
+output/edchoice_universal_school_choice_duplicates.csv
+output/edchoice_universal_school_choice_conflicts.csv
+output/edchoice_universal_school_choice_changes.csv
+output/edchoice_universal_school_choice_source_metadata.json
+output/edchoice_universal_school_choice_ingestion_report.md
+output/edchoice_universal_school_choice.sql
+```
+
+The command is review-only: it never invokes the Supabase loader. SQL is emitted only when all `NEW` rows are DB-ready and there are no unresolved validation/review blockers. Existing records are never automatically overwritten or deleted.
+
+Official/legal URLs remain separate from EdChoice research provenance. `source_url` is a verified government/statute/program URL; EdChoice remains in `research_source_*`. A small reviewed override file (`data/edchoice_official_source_overrides.json`) resolves official government URLs when EdChoice itself links to a non-government statute mirror. These overrides cannot make a program qualify; qualification always comes from EdChoice's own dashboard or Universal School Choice classification.
+
+For an existing database, review and apply this schema-only category migration before inserting approved rows:
+
+```text
+database/02_add_universal_school_choice_category.sql
+```
+
+It only extends the existing category CHECK constraints; it does not insert or modify policy records.
+
+Full extraction, mapping, validation, deduplication, and change-detection rules are documented in:
+
+```text
+docs/edchoice_universal_school_choice_mapping.md
+```
 
 ## Refresh procedure
 
@@ -339,7 +419,8 @@ Refresh the structured map sources independently and review each source before a
 ```powershell
 python -m app.cli ingest-multistate
 python -m app.cli ingest-ai-laws-education --existing-csv ".\output\policies.csv"
+python -m app.cli ingest-edchoice-universal-school-choice --existing-csv ".\output\policies.csv"
 pytest -q
 ```
 
-The first command refreshes the reviewed MultiState snapshot outputs. The second refreshes AI Laws by State and compares incoming records against the current MultiState `policies.csv` before generating its review/conflict artifacts. Review `validation.json`, `policies_review.csv`, and the `ai_laws_education_*` review files before any manual load. `ingest-ai-laws-education` never writes to Supabase.
+The first command refreshes the reviewed MultiState snapshot outputs. The second refreshes AI Laws by State. The third reviews EdChoice Universal School Choice records, preferring dashboard `Universal=Full` and automatically using the first-party universality-page fallback when needed. Both additive-source commands compare incoming records against the supplied current structured-policy snapshot and never write to Supabase. Review `validation.json`, `policies_review.csv`, the `ai_laws_education_*` files, and the `edchoice_universal_school_choice_*` files before any manual load.

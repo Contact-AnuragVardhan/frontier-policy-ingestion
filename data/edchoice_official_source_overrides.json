@@ -1,0 +1,42 @@
+[
+  {
+    "state": "Arizona",
+    "program_name": "Empowerment Scholarship Accounts",
+    "official_source_url": "https://www.azed.gov/esa/resources",
+    "source_kind": "official_program_and_statute_resources",
+    "verification_note": "Reviewed Arizona Department of Education ESA resources as an official state source corresponding to EdChoice's Empowerment Scholarship Accounts record.",
+    "verified_at": "2026-09-30"
+  },
+  {
+    "state": "Arkansas",
+    "program_name": "Arkansas Children’s Educational Freedom Account Program",
+    "official_source_url": "https://dese.ade.arkansas.gov/offices/office-of-school-choice-and-parent-empowerment/education-freedom-accounts",
+    "source_kind": "official_program_page",
+    "verification_note": "Reviewed the Arkansas Division of Elementary and Secondary Education Education Freedom Accounts page; EdChoice's governing-statute link itself points to a non-government legal publisher.",
+    "verified_at": "2026-09-30"
+  },
+  {
+    "state": "Florida",
+    "program_name": "Family Empowerment Scholarship for Educational Options",
+    "official_source_url": "https://www.leg.state.fl.us/Statutes/index.cfm?App_mode=Display_Statute&Search_String=&URL=1000-1099/1002/Sections/1002.394.html",
+    "source_kind": "official_statute",
+    "verification_note": "Reviewed Florida Legislature Statute 1002.394 corresponding to the Family Empowerment Scholarship program identified by EdChoice.",
+    "verified_at": "2026-09-30"
+  },
+  {
+    "state": "New Hampshire",
+    "program_name": "New Hampshire Education Freedom Account",
+    "official_source_url": "https://gc.nh.gov/rsa/html/XV/194-F/194-F-mrg.htm",
+    "source_kind": "official_statute",
+    "verification_note": "Reviewed official New Hampshire General Court RSA Chapter 194-F because the EdChoice governing-statute link points to a non-government legal publisher.",
+    "verified_at": "2026-09-30"
+  },
+  {
+    "state": "West Virginia",
+    "program_name": "Hope Scholarship Program",
+    "official_source_url": "https://code.wvlegislature.gov/18-31/",
+    "source_kind": "official_statute",
+    "verification_note": "Reviewed West Virginia Code Article 18-31, which identifies the Hope Scholarship Program and its governing provisions.",
+    "verified_at": "2026-09-30"
+  }
+]

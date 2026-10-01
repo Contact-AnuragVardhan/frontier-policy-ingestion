@@ -75,8 +75,12 @@ def validate_records(records: list[PolicyRecord]) -> tuple[list[str], dict]:
             errors.append(f"{prefix}: status_detail is required")
         if not _valid_url(record.source_url):
             errors.append(f"{prefix}: invalid source_url {record.source_url!r}")
-        elif "ailawsbystate.com" in urlparse(record.source_url).netloc.lower():
-            errors.append(f"{prefix}: source_url must be an official source, not AI Laws by State")
+        else:
+            source_host = urlparse(record.source_url).netloc.lower()
+            if "ailawsbystate.com" in source_host:
+                errors.append(f"{prefix}: source_url must be an official source, not AI Laws by State")
+            if "edchoice.org" in source_host:
+                errors.append(f"{prefix}: source_url must be an official source, not EdChoice")
         if record.research_source_url and not _valid_url(record.research_source_url):
             errors.append(f"{prefix}: invalid research_source_url {record.research_source_url!r}")
         if not record.status_as_of_date:

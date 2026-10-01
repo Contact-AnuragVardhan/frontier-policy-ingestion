@@ -23,3 +23,14 @@ AI_LAWS_EDUCATION_SOURCE_URL = os.getenv(
     "https://www.ailawsbystate.com/tools/education-ai-tracker",
 )
 AI_LAWS_EDUCATION_FIXTURE_PATH = ROOT / "data" / "fixtures" / "ai_laws_education" / "sample.json"
+
+
+# EdChoice — School Choice in America Dashboard.
+EDCHOICE_SCHOOL_CHOICE_SOURCE_URL = os.getenv(
+    "EDCHOICE_SCHOOL_CHOICE_SOURCE_URL",
+    "https://www.edchoice.org/school-choice/dashboard/",
+)
+EDCHOICE_FIXTURE_PATH = ROOT / "data" / "fixtures" / "edchoice_school_choice" / "sample.json"
+EDCHOICE_OFFICIAL_SOURCE_OVERRIDES_PATH = (
+    ROOT / "data" / "edchoice_official_source_overrides.json"
+)

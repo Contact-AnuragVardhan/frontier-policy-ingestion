@@ -1,0 +1,169 @@
+{
+  "source_date": "2026-08-27",
+  "dashboard_html": "<!-- Representative source-supported EdChoice fixture. See dashboard_sample.html for parser fixture. -->\n",
+  "records": [
+    {
+      "row": {
+        "state_name": "Arizona",
+        "program_type": "Education Savings Account",
+        "program_name": "Empowerment Scholarship Accounts",
+        "enacted_year": 2011,
+        "launched_year": 2011,
+        "eligibility_rate": "100%",
+        "public_funding": "100%",
+        "universal": "Full",
+        "program_url": "https://www.edchoice.org/school-choice/programs/arizona-empowerment-scholarship-accounts/"
+      },
+      "detail": {
+        "title": "Arizona Empowerment Scholarship Accounts",
+        "enacted_year": 2011,
+        "launched_year": 2011,
+        "funding_mechanism": "Education funding formula",
+        "universal_eligibility": true,
+        "universal_usage": true,
+        "universal_funding": true,
+        "truly_universal": true,
+        "governing_statute_text": "Ariz. Rev. Stat. §§ 15-2401 through 2404",
+        "governing_statute_url": "https://www.azed.gov/esa/resources",
+        "apply_url": "https://www.azed.gov/esa/resources",
+        "detail_last_updated": "2025-12-16",
+        "official_source_url": "https://www.azed.gov/esa/resources",
+        "official_source_kind": "governing_statute"
+      }
+    },
+    {
+      "row": {
+        "state_name": "Arkansas",
+        "program_type": "Education Savings Account",
+        "program_name": "Arkansas Children’s Educational Freedom Account Program",
+        "enacted_year": 2023,
+        "launched_year": 2024,
+        "eligibility_rate": "100%",
+        "public_funding": "53%",
+        "universal": "Full",
+        "program_url": "https://www.edchoice.org/school-choice/programs/arkansas-childrens-educational-freedom-account-program/"
+      },
+      "detail": {
+        "title": "Arkansas Children’s Educational Freedom Account Program",
+        "enacted_year": 2023,
+        "launched_year": 2023,
+        "funding_mechanism": "Appropriation",
+        "universal_eligibility": true,
+        "universal_usage": true,
+        "universal_funding": true,
+        "truly_universal": true,
+        "governing_statute_text": "Arkansas Code § 6-18-2501 through 6-18-2511",
+        "governing_statute_url": "https://advance.lexis.com/",
+        "apply_url": "https://dese.ade.arkansas.gov/offices/office-of-school-choice-and-parent-empowerment/education-freedom-accounts",
+        "detail_last_updated": "2025-12-16",
+        "official_source_url": "https://dese.ade.arkansas.gov/offices/office-of-school-choice-and-parent-empowerment/education-freedom-accounts",
+        "official_source_kind": "official_program_page"
+      }
+    },
+    {
+      "row": {
+        "state_name": "Florida",
+        "program_type": "Education Savings Account",
+        "program_name": "Family Empowerment Scholarship for Educational Options",
+        "enacted_year": 2019,
+        "launched_year": 2019,
+        "eligibility_rate": "100%",
+        "public_funding": "63%",
+        "universal": "Full",
+        "program_url": "https://www.edchoice.org/school-choice/programs/florida-family-empowerment-scholarship-program"
+      },
+      "detail": {
+        "title": "Family Empowerment Scholarship for Educational Options",
+        "enacted_year": 2019,
+        "launched_year": 2019,
+        "funding_mechanism": "Florida Education Finance Plan",
+        "universal_eligibility": true,
+        "universal_usage": false,
+        "universal_funding": true,
+        "truly_universal": true,
+        "governing_statute_text": "Fla. Stat. § 1002.394",
+        "governing_statute_url": "https://www.leg.state.fl.us/Statutes/index.cfm?App_mode=Display_Statute&Search_String=&URL=1000-1099/1002/Sections/1002.394.html",
+        "detail_last_updated": "2025-12-16",
+        "official_source_url": "https://www.leg.state.fl.us/Statutes/index.cfm?App_mode=Display_Statute&Search_String=&URL=1000-1099/1002/Sections/1002.394.html",
+        "official_source_kind": "governing_statute"
+      }
+    },
+    {
+      "row": {
+        "state_name": "New Hampshire",
+        "program_type": "Education Savings Account",
+        "program_name": "New Hampshire Education Freedom Account",
+        "enacted_year": 2021,
+        "launched_year": 2021,
+        "eligibility_rate": "100%",
+        "public_funding": "22%",
+        "universal": "Full",
+        "program_url": "https://www.edchoice.org/school-choice/programs/education-freedom-account-program/"
+      },
+      "detail": {
+        "title": "New Hampshire Education Freedom Account",
+        "enacted_year": 2021,
+        "launched_year": 2021,
+        "funding_mechanism": "Formula funded (Education Trust Fund)",
+        "universal_eligibility": true,
+        "universal_usage": true,
+        "universal_funding": true,
+        "truly_universal": true,
+        "governing_statute_text": "N.H. Rev. Stat. § 194-F: 1-12",
+        "governing_statute_url": "https://law.justia.com/codes/new-hampshire/title-xv/chapter-194-f/",
+        "apply_url": "https://nh.scholarshipfund.org/",
+        "detail_last_updated": "2025-12-16"
+      }
+    },
+    {
+      "row": {
+        "state_name": "West Virginia",
+        "program_type": "Education Savings Account",
+        "program_name": "Hope Scholarship Program",
+        "enacted_year": 2021,
+        "launched_year": 2022,
+        "eligibility_rate": "100%",
+        "public_funding": "35%",
+        "universal": "Full",
+        "program_url": "https://www.edchoice.org/school-choice/programs/hope-scholarship-program/"
+      },
+      "detail": {
+        "title": "Hope Scholarship Program",
+        "enacted_year": 2021,
+        "launched_year": 2022,
+        "funding_mechanism": "Annual appropriation from the Special Dedicated Revenue Fund",
+        "universal_eligibility": true,
+        "universal_usage": true,
+        "universal_funding": true,
+        "truly_universal": true,
+        "governing_statute_text": "West Virginia §18-31",
+        "governing_statute_url": "https://code.wvlegislature.gov/18-31/",
+        "detail_last_updated": "2025-12-16",
+        "official_source_url": "https://code.wvlegislature.gov/18-31/",
+        "official_source_kind": "governing_statute"
+      }
+    },
+    {
+      "row": {
+        "state_name": "Alabama",
+        "program_type": "Education Savings Account",
+        "program_name": "Creating Hope and Opportunity for Our Students' Education (CHOOSE) Act of 2024",
+        "enacted_year": 2024,
+        "launched_year": 2025,
+        "eligibility_rate": "100%",
+        "public_funding": "43%",
+        "universal": "Eligibility",
+        "program_url": "https://www.edchoice.org/school-choice/programs/alabama-choose-act/"
+      },
+      "detail": {
+        "title": "The Creating Hope and Opportunity for Our Students’ Education (CHOOSE) Act of 2024",
+        "enacted_year": 2024,
+        "launched_year": 2025,
+        "universal_eligibility": true,
+        "universal_usage": true,
+        "universal_funding": false,
+        "truly_universal": false
+      }
+    }
+  ]
+}

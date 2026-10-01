@@ -1,4 +1,4 @@
--- Frontier Education Project / EdTech Map
+-- AI Choice / AI Choice Map
 -- Fresh-create schema (v2).
 -- Run this when creating the policies table from scratch.
 -- IMPORTANT: CREATE TABLE IF NOT EXISTS does not upgrade an existing v1 table.
@@ -58,7 +58,7 @@ create table if not exists public.policies (
     check (policy_type in ('Bill','Law','Regulation','Guidance','Other')),
 
   constraint policies_category_check
-    check (category in ('AI Use','Student Privacy','Parental Consent','AI Literacy','School Procurement')),
+    check (category in ('AI Use','Student Privacy','Parental Consent','AI Literacy','School Procurement','Universal School Choice')),
 
   constraint policies_categories_nonempty_check
     check (cardinality(categories) > 0),
@@ -70,7 +70,8 @@ create table if not exists public.policies (
         'Student Privacy',
         'Parental Consent',
         'AI Literacy',
-        'School Procurement'
+        'School Procurement',
+        'Universal School Choice'
       ]::text[]
     ),
 

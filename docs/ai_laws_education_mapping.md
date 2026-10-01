@@ -76,7 +76,7 @@ a review gate, not a legal semantic classifier.
 
 - District of Columbia is normalized to `DC`; the included database schema accepts two-letter jurisdiction codes.
 - Federal rows currently exposed by the Education AI Tracker are retained in review output but classified invalid for the state/DC map model, so they cannot be silently loaded as state policies.
-- The supplied archive contains the ingestion/database code but not the deployed Node policy API or React EdTech Map source. No frontend/backend code is changed by this task; API/UI compatibility must be verified in those repositories before production import, especially for `Inactive`/`Unknown` statuses and DC discoverability.
+- The supplied archive contains the ingestion/database code but not the deployed Node policy API or React AI Choice Map source. No frontend/backend code is changed by this task; API/UI compatibility must be verified in those repositories before production import, especially for `Inactive`/`Unknown` statuses and DC discoverability.
 
 ## Live-source integrity checks
 
@@ -147,4 +147,4 @@ The tracker `Year` value is preserved as source metadata but is **not treated as
 
 ## K-12 scope guard
 
-AI Choice's EdTech Map is K-12 scoped. Records that are clearly postsecondary-only (for example, community-college-only or higher-education-only measures) or professional-licensing-only are excluded after review. Mixed bills that explicitly include K-12 school districts remain eligible.
+AI Choice Map is K-12 scoped. Records that are clearly postsecondary-only (for example, community-college-only or higher-education-only measures) or professional-licensing-only are excluded after review. Mixed bills that explicitly include K-12 school districts remain eligible.
