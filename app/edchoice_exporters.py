@@ -7,7 +7,7 @@ from pathlib import Path
 
 from app.exporters import DB_FIELDS, _sql_value
 from app.models import PolicyRecord
-from app.sources.edchoice_school_choice import Candidate, DashboardRow
+from app.sources.edchoice_school_choice import Candidate, DashboardRow, QUALIFYING_UNIVERSAL_VALUES
 
 REVIEW_FIELDS = [
     "classification",
@@ -160,10 +160,13 @@ do nothing;
 
 def summarize(candidates: list[Candidate], conflicts: list[dict], changes: list[dict]) -> dict:
     classifications = Counter(c.classification for c in candidates)
-    qualifying = [c for c in candidates if c.raw.universal.strip().lower() == "full"]
+    qualifying_values = {value.lower() for value in QUALIFYING_UNIVERSAL_VALUES}
+    qualifying = [c for c in candidates if c.raw.universal.strip().lower() in qualifying_values]
     return {
         "raw_source_entries": len(candidates),
         "qualifying_universal_school_choice_entries": len(qualifying),
+        "qualifying_full_entries": sum(1 for c in qualifying if c.raw.universal.strip().lower() == "full"),
+        "qualifying_eligibility_entries": sum(1 for c in qualifying if c.raw.universal.strip().lower() == "eligibility"),
         "qualifying_state_count": len({c.state_code for c in qualifying if c.state_code}),
         "qualifying_states": sorted({c.raw.state_name for c in qualifying}),
         "classifications": dict(sorted(classifications.items())),
@@ -212,9 +215,9 @@ def write_report(
         "",
         "## Classification rule",
         "",
-        "Primary rule: only rows whose EdChoice dashboard `Universal` value is exactly `Full` are normalized to `Universal School Choice`.",
-        "If the dashboard table is absent from server HTML, the first-party Universal School Choice page is used as a fallback: the state must be listed as Truly Universal and the same program must appear under Universal Eligibility, Universal Options, and Universal Funding.",
-        "Dashboard rows marked `Eligibility`, `N/A`, or any other value are kept visible as EXCLUDED and are not policy-write candidates.",
+        "Primary rule: rows whose EdChoice dashboard `Universal` value is `Full` or `Eligibility` are normalized to `Universal School Choice`.",
+        "If the dashboard table is absent from server HTML, the first-party Universal School Choice page is used as a fallback: every program under Universal Eligibility qualifies; programs that also appear under Universal Options and Universal Funding for a Truly Universal state are classified as Full.",
+        "Dashboard rows marked `N/A` or any other non-qualifying value are kept visible as EXCLUDED and are not policy-write candidates.",
         "",
         "## Date handling",
         "",

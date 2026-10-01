@@ -208,7 +208,7 @@ def _source_changes(candidates: list[Candidate], existing: list[PolicyRecord]) -
         elif current.classification == "EXCLUDED":
             changes.append(
                 {
-                    "change_type": "NO_LONGER_FULL_REVIEW",
+                    "change_type": "NO_LONGER_UNIVERSAL_ELIGIBILITY_REVIEW",
                     "state_code": record.state_code,
                     "program_name": record.policy_identifier,
                     "existing_title": record.title,
@@ -313,7 +313,7 @@ def run_edchoice_ingestion(
             )
 
     warnings = [
-        "Universal=Eligibility is intentionally not mapped to Universal School Choice; only Universal=Full qualifies.",
+        "Universal School Choice now includes EdChoice dashboard Universal=Full and Universal=Eligibility; Universal=N/A and other values remain excluded.",
         "Enacted/launched years are not converted into effective_date.",
         "Existing records are never silently overwritten or deleted when EdChoice changes classification.",
         "Official-source overrides are review metadata only; they do not determine which states qualify as Universal School Choice.",
@@ -325,7 +325,7 @@ def run_edchoice_ingestion(
         )
     if extraction_method == "universal_school_choice_page_fallback":
         warnings.append(
-            "The dashboard table was not present in server HTML. Classification was derived from EdChoice's first-party Universal School Choice page by requiring the same program to appear under Universal Eligibility, Universal Options, and Universal Funding for a state listed as Truly Universal."
+            "The dashboard table was not present in server HTML. Classification was derived from EdChoice's first-party Universal School Choice page: every program under Universal Eligibility qualifies; programs also appearing under Universal Options and Universal Funding for a Truly Universal state are classified as Full."
         )
 
     summary = summarize(candidates, conflicts, changes)
@@ -360,7 +360,9 @@ def run_edchoice_ingestion(
         "universal_fallback_url": UNIVERSAL_SOURCE_URL if universal_html else None,
         "run_started_at_utc": run_started_at,
         "source_row_count": len(rows),
-        "qualifying_full_count": summary["qualifying_universal_school_choice_entries"],
+        "qualifying_universal_school_choice_count": summary["qualifying_universal_school_choice_entries"],
+        "qualifying_full_count": summary.get("qualifying_full_entries", 0),
+        "qualifying_eligibility_count": summary.get("qualifying_eligibility_entries", 0),
         "qualifying_states": summary["qualifying_states"],
         "existing_comparison_source": existing_source,
         "existing_comparison_source_kind": existing_source_kind,
@@ -370,9 +372,10 @@ def run_edchoice_ingestion(
         "production_supabase_modified": False,
         "chatbot_rag_modified": False,
         "qualification_rule": (
-            "Prefer dashboard Universal=Full. If the dashboard table is client-rendered and absent from server HTML, "
-            "use EdChoice's Universal School Choice page and require the same program to appear under Universal Eligibility, "
-            "Universal Options, and Universal Funding for a state EdChoice lists as Truly Universal."
+            "Include dashboard Universal=Full and Universal=Eligibility; exclude Universal=N/A and other values. "
+            "If the dashboard table is client-rendered and absent from server HTML, use every program in EdChoice's "
+            "Universal Eligibility section; mark a program Full only when it also appears under Universal Options and "
+            "Universal Funding for a state EdChoice lists as Truly Universal."
         ),
     }
     write_source_metadata(config.OUTPUT_DIR / "edchoice_universal_school_choice_source_metadata.json", metadata)

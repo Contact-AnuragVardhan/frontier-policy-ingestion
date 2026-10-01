@@ -88,21 +88,24 @@ def test_detail_parser_extracts_edchoice_universality_and_official_url():
     assert detail.official_source_url == "https://www.azed.gov/esa/resources"
 
 
-def test_universal_page_fallback_derives_only_truly_universal_programs():
+def test_universal_page_fallback_includes_full_and_universal_eligibility_programs():
     html = (FIXTURE_DIR / "universal_school_choice_sample.html").read_text(encoding="utf-8")
     rows = parse_universal_school_choice_html(html)
 
     assert [row.state_name for row in rows] == [
+        "Alabama",
         "Arizona",
         "Arkansas",
         "Florida",
         "New Hampshire",
         "West Virginia",
     ]
-    assert all(row.universal == "Full" for row in rows)
+    by_state = {row.state_name: row for row in rows}
+    assert by_state["Alabama"].universal == "Eligibility"
+    assert all(by_state[state].universal == "Full" for state in ["Arizona", "Arkansas", "Florida", "New Hampshire", "West Virginia"])
     assert all(row.classification_source == "universal_school_choice_page" for row in rows)
     assert all(row.classification_source_url == UNIVERSAL_SOURCE_URL for row in rows)
-    assert rows[0].program_url.endswith("arizona-empowerment-scholarship-accounts/")
+    assert by_state["Arizona"].program_url.endswith("arizona-empowerment-scholarship-accounts/")
 
 
 def test_universal_page_fallback_handles_nested_wordpress_section_wrappers():
@@ -110,14 +113,16 @@ def test_universal_page_fallback_handles_nested_wordpress_section_wrappers():
     rows = parse_universal_school_choice_html(html)
 
     assert [row.state_name for row in rows] == [
+        "Alabama",
         "Arizona",
         "Arkansas",
         "Florida",
         "New Hampshire",
         "West Virginia",
     ]
-    assert all(row.universal == "Full" for row in rows)
-    assert rows[0].program_name == "Arizona Empowerment Scholarship Accounts"
+    assert rows[0].universal == "Eligibility"
+    assert rows[0].program_name == "The Creating Hope and Opportunity for Our Students’ Education (CHOOSE) Act of 2024"
+    assert all(row.universal == "Full" for row in rows[1:])
 
 
 def test_exact_category_and_state_normalization_for_valid_full_row():
@@ -134,14 +139,33 @@ def test_exact_category_and_state_normalization_for_valid_full_row():
     assert candidate.status == "Enacted"
 
 
-def test_non_full_state_is_excluded_without_broadening_definition():
+def test_universal_eligibility_state_is_included_in_category():
     candidate = _candidate(5)
 
     assert candidate.raw.state_name == "Alabama"
     assert candidate.raw.universal == "Eligibility"
+    assert candidate.classification == "NEW"
+    assert candidate.category == "Universal School Choice"
+    assert candidate.categories == ("Universal School Choice",)
+    assert candidate.source_url == "https://www.revenue.alabama.gov/tax-policy/the-choose-act/"
+    assert candidate.last_verified_at == "2026-10-01"
+    assert "EdChoice dashboard Universal: Eligibility" in candidate.status_detail
+
+
+def test_non_universal_na_row_is_excluded():
+    row = DashboardRow(
+        state_name="Georgia",
+        program_type="Education Savings Account",
+        program_name="Non-universal example",
+        enacted_year=2025,
+        launched_year=2025,
+        universal="N/A",
+    )
+    candidate = candidate_from_source(row, DetailInfo(), source_date="2026-08-27", official_source_overrides={})
+
     assert candidate.classification == "EXCLUDED"
     assert candidate.category is None
-    assert "only 'Full' qualifies" in candidate.exclusion_reason
+    assert "Full, Eligibility" in candidate.exclusion_reason
 
 
 def test_missing_official_source_stays_review_only_and_no_date_is_invented():
@@ -259,15 +283,15 @@ def test_matching_official_url_with_different_identifier_requires_review():
 
 
 def test_rerun_is_idempotent_against_previously_inserted_records():
-    first_pass = [_candidate(i) for i in range(5)]
+    first_pass = [_candidate(i) for i in range(6)]
     first_classified, _, _ = _classify_against_existing(first_pass, [])
     inserted = [c.to_policy_record() for c in first_classified if c.is_valid_for_db()]
-    assert len(inserted) == 5
+    assert len(inserted) == 6
 
-    second_pass = [_candidate(i) for i in range(5)]
+    second_pass = [_candidate(i) for i in range(6)]
     second_classified, duplicates, _ = _classify_against_existing(second_pass, inserted)
     assert {c.classification for c in second_classified} == {"DUPLICATE_EXISTING"}
-    assert len(duplicates) == 5
+    assert len(duplicates) == 6
 
 
 def test_fixture_pipeline_generates_review_artifacts_without_supabase_write(tmp_path, monkeypatch):
@@ -276,11 +300,14 @@ def test_fixture_pipeline_generates_review_artifacts_without_supabase_write(tmp_
 
     assert exit_code == 0
     assert summary["raw_source_entries"] == 6
-    assert summary["qualifying_universal_school_choice_entries"] == 5
-    assert summary["classifications"]["NEW"] == 5
-    assert summary["classifications"]["EXCLUDED"] == 1
-    assert summary["new_records_ready_for_sql"] == 5
+    assert summary["qualifying_universal_school_choice_entries"] == 6
+    assert summary["qualifying_full_entries"] == 5
+    assert summary["qualifying_eligibility_entries"] == 1
+    assert summary["classifications"]["NEW"] == 6
+    assert summary["classifications"].get("EXCLUDED", 0) == 0
+    assert summary["new_records_ready_for_sql"] == 6
     assert summary["qualifying_states"] == [
+        "Alabama",
         "Arizona",
         "Arkansas",
         "Florida",
@@ -296,7 +323,7 @@ def test_fixture_pipeline_generates_review_artifacts_without_supabase_write(tmp_
     assert (tmp_path / "edchoice_universal_school_choice_review.csv").exists()
     assert (tmp_path / "edchoice_universal_school_choice_validation.json").exists()
     sql = (tmp_path / "edchoice_universal_school_choice.sql").read_text(encoding="utf-8")
-    assert sql.count("Universal School Choice") >= 5
+    assert sql.count("Universal School Choice") >= 6
     assert "insert into public.policies" in sql
 
 
@@ -313,7 +340,7 @@ def test_live_pipeline_falls_back_when_dashboard_table_is_client_rendered(tmp_pa
     universal_html = (FIXTURE_DIR / "universal_school_choice_sample.html").read_text(encoding="utf-8")
     detail_by_state = {
         item["row"]["state_name"]: DetailInfo(**item.get("detail", {}))
-        for item in _payload()["records"][:5]
+        for item in _payload()["records"]
     }
 
     def fake_fetch_html(url, **kwargs):
@@ -333,8 +360,10 @@ def test_live_pipeline_falls_back_when_dashboard_table_is_client_rendered(tmp_pa
     exit_code, summary = run_edchoice_ingestion()
 
     assert exit_code == 0
-    assert summary["qualifying_universal_school_choice_entries"] == 5
-    assert summary["classifications"]["NEW"] == 5
+    assert summary["qualifying_universal_school_choice_entries"] == 6
+    assert summary["qualifying_full_entries"] == 5
+    assert summary["qualifying_eligibility_entries"] == 1
+    assert summary["classifications"]["NEW"] == 6
     assert summary["extraction_method"] == "universal_school_choice_page_fallback"
     metadata = json.loads(
         (tmp_path / "edchoice_universal_school_choice_source_metadata.json").read_text(encoding="utf-8")
@@ -351,3 +380,17 @@ def test_existing_multistate_fixture_still_validates_after_category_extension():
     assert errors == []
     assert summary["record_count"] == len(records)
     assert all(CATEGORY not in record.categories for record in records)
+
+
+def test_reviewed_official_source_overrides_cover_live_universal_eligibility_gaps():
+    overrides = load_official_source_overrides(config.EDCHOICE_OFFICIAL_SOURCE_OVERRIDES_PATH)
+    expected = {
+        ("alaska", "alaska correspondence school allotment program"): "https://www.akleg.gov/statutesPDF/Title-14.pdf",
+        ("idaho", "idaho parental choice tax credit"): "https://tax.idaho.gov/taxes/income-tax/individual-income/popular-credits-and-deductions/parental-choice-tax-credit-and-advance-payment/",
+        ("north carolina", "north carolina opportunity scholarships"): "https://www3.ncleg.gov/EnactedLegislation/Statutes/HTML/ByArticle/Chapter_115C/Article_39.html",
+        ("tennessee", "tennessee education freedom scholarship act"): "https://www.tn.gov/education/efs.htm.html",
+        ("texas", "texas education savings account program"): "https://capitol.texas.gov/billlookup/BillSummary.aspx?Bill=SB2&LegSess=89R",
+    }
+    for key, url in expected.items():
+        assert overrides[key]["official_source_url"] == url
+        assert overrides[key]["verified_at"] == "2026-10-01"

@@ -190,7 +190,7 @@ def main() -> int:
     edchoice = sub.add_parser(
         "ingest-edchoice-universal-school-choice",
         help=(
-            "Extract EdChoice Universal=Full school-choice records and generate review artifacts only; "
+            "Extract EdChoice Universal=Full or Eligibility school-choice records and generate review artifacts only; "
             "never writes production Supabase."
         ),
     )

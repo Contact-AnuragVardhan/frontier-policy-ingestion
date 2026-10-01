@@ -38,5 +38,53 @@
     "source_kind": "official_statute",
     "verification_note": "Reviewed West Virginia Code Article 18-31, which identifies the Hope Scholarship Program and its governing provisions.",
     "verified_at": "2026-09-30"
+  },
+  {
+    "state": "Alabama",
+    "program_name": "The Creating Hope and Opportunity for Our Students’ Education (CHOOSE) Act of 2024",
+    "official_source_url": "https://www.revenue.alabama.gov/tax-policy/the-choose-act/",
+    "source_kind": "official_program_page",
+    "verification_note": "Reviewed the Alabama Department of Revenue CHOOSE Act program page as the official administering-agency source for the program.",
+    "verified_at": "2026-10-01"
+  },
+  {
+    "state": "Alaska",
+    "program_name": "Alaska Correspondence School Allotment Program",
+    "official_source_url": "https://www.akleg.gov/statutesPDF/Title-14.pdf",
+    "source_kind": "official_statute",
+    "verification_note": "Reviewed the official Alaska Legislature Title 14 statutes PDF containing AS 14.03.300 et seq. governing correspondence study programs; EdChoice linked to a non-government legal publisher.",
+    "verified_at": "2026-10-01"
+  },
+  {
+    "state": "Idaho",
+    "program_name": "Idaho Parental Choice Tax Credit",
+    "official_source_url": "https://tax.idaho.gov/taxes/income-tax/individual-income/popular-credits-and-deductions/parental-choice-tax-credit-and-advance-payment/",
+    "source_kind": "official_program_page",
+    "verification_note": "Reviewed the Idaho State Tax Commission program page, which identifies the Parental Choice Tax Credit and cites Idaho Code section 63-3029N; EdChoice linked to a non-government statute mirror.",
+    "verified_at": "2026-10-01"
+  },
+  {
+    "state": "North Carolina",
+    "program_name": "North Carolina Opportunity Scholarships",
+    "official_source_url": "https://www3.ncleg.gov/EnactedLegislation/Statutes/HTML/ByArticle/Chapter_115C/Article_39.html",
+    "source_kind": "official_statute",
+    "verification_note": "Reviewed the official North Carolina General Assembly Article 39 statutes containing Part 2A Scholarship Grants, including G.S. 115C-562.1 et seq.; EdChoice linked to a non-government legal publisher.",
+    "verified_at": "2026-10-01"
+  },
+  {
+    "state": "Tennessee",
+    "program_name": "Tennessee Education Freedom Scholarship Act",
+    "official_source_url": "https://www.tn.gov/education/efs.htm.html",
+    "source_kind": "official_program_page",
+    "verification_note": "Reviewed the Tennessee Department of Education Education Freedom Scholarship Program page, which identifies Tenn. Code Ann. 49-6-3501 et seq. and the 2025 enactment.",
+    "verified_at": "2026-10-01"
+  },
+  {
+    "state": "Texas",
+    "program_name": "Texas Education Savings Account Program",
+    "official_source_url": "https://capitol.texas.gov/billlookup/BillSummary.aspx?Bill=SB2&LegSess=89R",
+    "source_kind": "official_legislation",
+    "verification_note": "Reviewed the official Texas Legislature enrolled bill summary for 89(R) SB 2 establishing the education savings account program, effective September 1, 2025.",
+    "verified_at": "2026-10-01"
   }
 ]

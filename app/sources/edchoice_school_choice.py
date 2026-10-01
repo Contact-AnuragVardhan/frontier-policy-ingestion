@@ -19,7 +19,9 @@ SOURCE_NAME = "EdChoice School Choice Dashboard"
 SOURCE_URL = "https://www.edchoice.org/school-choice/dashboard/"
 UNIVERSAL_SOURCE_URL = "https://www.edchoice.org/universal-school-choice"
 CATEGORY = "Universal School Choice"
-QUALIFYING_UNIVERSAL_VALUE = "Full"
+QUALIFYING_UNIVERSAL_VALUES = ("Full", "Eligibility")
+FULL_UNIVERSAL_VALUE = "Full"
+ELIGIBILITY_UNIVERSAL_VALUE = "Eligibility"
 
 EXPECTED_HEADERS = {
     "state",
@@ -498,50 +500,57 @@ def _truly_universal_states(soup: BeautifulSoup) -> list[str]:
     return states
 
 
-def parse_universal_school_choice_html(html: str, page_url: str = UNIVERSAL_SOURCE_URL) -> list[DashboardRow]:
-    """Extract fully universal programs from EdChoice's first-party universality page.
+def _is_qualifying_universal_value(value: str | None) -> bool:
+    normalized = normalize_space(value or "").lower()
+    return normalized in {item.lower() for item in QUALIFYING_UNIVERSAL_VALUES}
 
-    This is the automatic fallback when the dashboard's DataTable is populated only
-    client-side.  A qualifying program must (a) belong to a state EdChoice lists in
-    its Truly Universal section and (b) be the *same EdChoice program URL* present in
-    the Universal Eligibility, Universal Options, and Universal Funding sections.
-    That keeps the classification source-driven instead of inferring universality.
+
+def parse_universal_school_choice_html(html: str, page_url: str = UNIVERSAL_SOURCE_URL) -> list[DashboardRow]:
+    """Extract EdChoice programs with universal eligibility.
+
+    This is the automatic fallback when the dashboard DataTable is populated only
+    client-side. EdChoice's Universal Eligibility section is the authoritative
+    fallback for programs available to all K-12 students, including programs that
+    automatically become universal after a phase-in period. Programs that also meet
+    EdChoice's Truly Universal standard (eligibility + options + funding) are marked
+    ``Full``; the remaining universal-eligibility programs are marked ``Eligibility``.
     """
     soup = BeautifulSoup(html, "html.parser")
-    true_states = _truly_universal_states(soup)
+    true_states = set(_truly_universal_states(soup))
     eligibility = _programs_in_universal_section(soup, "Universal Eligibility", page_url)
     options = _programs_in_universal_section(soup, "Universal Options", page_url)
     funding = _programs_in_universal_section(soup, "Universal Funding", page_url)
 
-    rows: list[DashboardRow] = []
-    unresolved: list[str] = []
-    for state in true_states:
-        common_urls = set(eligibility.get(state, {})) & set(options.get(state, {})) & set(funding.get(state, {}))
-        if len(common_urls) != 1:
-            unresolved.append(f"{state}: expected exactly one program common to eligibility/options/funding, found {len(common_urls)}")
-            continue
-        program_url = next(iter(common_urls))
-        item = eligibility[state][program_url]
-        rows.append(
-            DashboardRow(
-                state_name=state,
-                program_type=item["program_type"],
-                program_name=item["program_name"],
-                enacted_year=None,
-                launched_year=None,
-                universal=QUALIFYING_UNIVERSAL_VALUE,
-                program_url=program_url,
-                classification_source="universal_school_choice_page",
-                classification_source_url=page_url,
-            )
-        )
+    full_program_urls_by_state = {
+        state: set(eligibility.get(state, {})) & set(options.get(state, {})) & set(funding.get(state, {}))
+        for state in true_states
+    }
 
-    if unresolved:
-        raise ValueError(
-            "Could not unambiguously derive EdChoice Truly Universal program(s): " + "; ".join(unresolved)
-        )
+    rows: list[DashboardRow] = []
+    for state, programs in eligibility.items():
+        for program_url, item in programs.items():
+            universal_value = (
+                FULL_UNIVERSAL_VALUE
+                if state in true_states and program_url in full_program_urls_by_state.get(state, set())
+                else ELIGIBILITY_UNIVERSAL_VALUE
+            )
+            rows.append(
+                DashboardRow(
+                    state_name=state,
+                    program_type=item["program_type"],
+                    program_name=item["program_name"],
+                    enacted_year=None,
+                    launched_year=None,
+                    universal=universal_value,
+                    program_url=program_url,
+                    classification_source="universal_school_choice_page",
+                    classification_source_url=page_url,
+                )
+            )
+
     if not rows:
-        raise ValueError("No Truly Universal EdChoice programs were extracted from the Universal School Choice page")
+        raise ValueError("No Universal Eligibility EdChoice programs were extracted from the Universal School Choice page")
+    rows.sort(key=lambda row: (row.state_name, row.program_name))
     return rows
 
 
@@ -596,23 +605,26 @@ def _is_official_government_url(url: str | None) -> bool:
         return False
     if host.endswith(".gov"):
         return True
-    # Some official state legislature sites use legacy .us domains.
-    if re.search(r"(^|\.)leg\.state\.[a-z]{2}\.us$", host):
+    # Some official state legislature sites use legacy state.xx.us domains.
+    if re.search(r"(^|\.)(?:leg|legislature)\.state\.[a-z]{2}\.us$", host):
         return True
     return False
 
 
 def _section_anchors(heading: Tag) -> list[Tag]:
+    """Collect links in an h2 section across nested WordPress wrappers."""
     anchors: list[Tag] = []
-    node = heading.find_next_sibling()
-    while node is not None:
-        if isinstance(node, Tag) and node.name in {"h1", "h2"}:
-            break
-        if isinstance(node, Tag):
-            anchors.extend(node.find_all("a", href=True))
-            if node.name == "a" and node.get("href"):
-                anchors.append(node)
-        node = node.find_next_sibling()
+    seen: set[int] = set()
+    for node in _nodes_until_next_h2(heading):
+        candidates: list[Tag] = []
+        if node.name == "a" and node.get("href"):
+            candidates.append(node)
+        candidates.extend(node.find_all("a", href=True))
+        for anchor in candidates:
+            if id(anchor) in seen:
+                continue
+            seen.add(id(anchor))
+            anchors.append(anchor)
     return anchors
 
 
@@ -718,14 +730,24 @@ def load_official_source_overrides(path: Path | None) -> dict[tuple[str, str], d
 
 def _summary_for(row: DashboardRow, detail: DetailInfo) -> str:
     parts = [f"{row.program_name} is an EdChoice-listed {row.program_type} program."]
+    universal_value = normalize_space(row.universal)
     if row.classification_source == "universal_school_choice_page":
-        parts.append(
-            "EdChoice's Universal School Choice page identifies the state as Truly Universal, and this program appears in its Universal Eligibility, Universal Options, and Universal Funding sections."
-        )
+        if universal_value.lower() == FULL_UNIVERSAL_VALUE.lower():
+            parts.append(
+                "EdChoice's Universal School Choice page lists this program under Universal Eligibility, Universal Options, and Universal Funding, meeting its Truly Universal standard."
+            )
+        else:
+            parts.append(
+                "EdChoice's Universal School Choice page lists this program under Universal Eligibility, meaning all K-12 students qualify or the program automatically becomes universal after a phase-in period."
+            )
     else:
-        parts.append("EdChoice's School Choice in America Dashboard classifies it as Full in the Universal column.")
+        parts.append(
+            f"EdChoice's School Choice in America Dashboard classifies it as {universal_value} in the Universal column."
+        )
     if detail.truly_universal is True:
         parts.append("The EdChoice program page also marks it as Truly Universal.")
+    elif detail.universal_eligibility is True and universal_value.lower() != FULL_UNIVERSAL_VALUE.lower():
+        parts.append("The EdChoice program page marks Universal Eligibility as yes.")
     if row.eligibility_rate:
         parts.append(f"The dashboard reports an eligibility rate of {row.eligibility_rate}.")
     return " ".join(parts)
@@ -749,12 +771,12 @@ def candidate_from_source(
     except ValueError as exc:
         candidate.issues.append(str(exc))
 
-    if normalize_space(row.universal).lower() != QUALIFYING_UNIVERSAL_VALUE.lower():
+    if not _is_qualifying_universal_value(row.universal):
         candidate.classification = "EXCLUDED"
         candidate.validation_result = "EXCLUDED"
         candidate.exclusion_reason = (
-            f"Dashboard Universal value is {row.universal!r}; only {QUALIFYING_UNIVERSAL_VALUE!r} "
-            f"qualifies for {CATEGORY}."
+            f"Dashboard Universal value is {row.universal!r}; only {', '.join(QUALIFYING_UNIVERSAL_VALUES)} "
+            f"qualify for {CATEGORY}."
         )
         return candidate
 
@@ -787,9 +809,12 @@ def candidate_from_source(
     if detail.launched_year and detail.launched_year != row.launched_year:
         detail_parts.append(f"EdChoice program page launched year: {detail.launched_year}")
     if row.classification_source == "universal_school_choice_page":
-        detail_parts.append("EdChoice Universal School Choice page: program appears under Eligibility, Options, and Funding for a Truly Universal state")
+        if normalize_space(row.universal).lower() == FULL_UNIVERSAL_VALUE.lower():
+            detail_parts.append("EdChoice Universal School Choice page: Universal Eligibility + Universal Options + Universal Funding (Truly Universal)")
+        else:
+            detail_parts.append("EdChoice Universal School Choice page: Universal Eligibility")
     else:
-        detail_parts.append("EdChoice dashboard Universal: Full")
+        detail_parts.append(f"EdChoice dashboard Universal: {normalize_space(row.universal)}")
     if detail.truly_universal is True:
         detail_parts.append("EdChoice program page: Truly Universal")
     candidate.status_detail = "; ".join(detail_parts)
@@ -840,13 +865,18 @@ def candidate_from_source(
         candidate.review_flags.append(
             f"WARNING: Dashboard launched year {row.launched_year} differs from program page {detail.launched_year}; both are preserved because the dashboard notes its year may be school-year ending or calendar year."
         )
-    if detail.truly_universal is False:
+    universal_value = normalize_space(row.universal).lower()
+    if universal_value == FULL_UNIVERSAL_VALUE.lower() and detail.truly_universal is False:
         candidate.issues.append(
-            "Source conflict: dashboard says Universal=Full but program detail page says Truly Universal=false."
+            "Source conflict: EdChoice classification says Universal=Full but program detail page says Truly Universal=false."
         )
-    elif detail.truly_universal is None:
+    elif universal_value == ELIGIBILITY_UNIVERSAL_VALUE.lower() and detail.universal_eligibility is False:
+        candidate.issues.append(
+            "Source conflict: EdChoice classification says Universal=Eligibility but program detail page says Universal Eligibility=false."
+        )
+    elif detail.truly_universal is None and detail.universal_eligibility is None:
         candidate.review_flags.append(
-            "WARNING: Program detail page did not expose a parseable Truly Universal flag; EdChoice source classification retained."
+            "WARNING: Program detail page did not expose parseable universality flags; EdChoice source classification retained."
         )
     if not candidate.source_url:
         candidate.review_flags.append(
@@ -877,7 +907,7 @@ def fetch_details_for_rows(
     details: dict[tuple[str, str], DetailInfo] = {}
     fetch_log: list[dict] = []
     for row in rows:
-        if normalize_space(row.universal).lower() != QUALIFYING_UNIVERSAL_VALUE.lower():
+        if not _is_qualifying_universal_value(row.universal):
             continue
         key = (row.state_name, row.program_name)
         if not row.program_url:

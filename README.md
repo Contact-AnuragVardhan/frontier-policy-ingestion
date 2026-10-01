@@ -6,7 +6,7 @@ It owns the structured policy ingestion sources for the map:
 
 1. MultiState — **How States Are Regulating AI in Education this Legislative Session** (source snapshot: **2026-04-09**)
 2. AI Laws by State — **Education AI Tracker**
-3. EdChoice — **School Choice in America Dashboard** (`Universal=Full` only for the `Universal School Choice` category)
+3. EdChoice — **School Choice in America Dashboard** (`Universal=Full` and `Universal=Eligibility` for the `Universal School Choice` category)
 
 Source URLs:
 
@@ -364,7 +364,7 @@ Offline source-supported fixture review:
 python -m app.cli ingest-edchoice-universal-school-choice --fixture ".\data\fixtures\edchoice_school_choice\sample.json" --existing-csv ".\output\policies.csv"
 ```
 
-The live command first looks for the dashboard's server-rendered table. If the dashboard table is client-rendered and absent from the HTML response, it automatically falls back to EdChoice's first-party `Universal School Choice` page. A fallback program qualifies only when its state is listed by EdChoice as **Truly Universal** and the same EdChoice program URL appears under **Universal Eligibility**, **Universal Options**, and **Universal Funding**.
+The live command first looks for the dashboard's server-rendered table. If the dashboard table is client-rendered and absent from the HTML response, it automatically falls back to EdChoice's first-party `Universal School Choice` page. Every program listed under **Universal Eligibility** qualifies for the AI Choice `Universal School Choice` category. Programs that also appear under **Universal Options** and **Universal Funding** for a state EdChoice lists as **Truly Universal** are retained as `Full`; the remaining qualifying programs are retained as `Eligibility`.
 
 If both first-party HTML paths become unavailable or ambiguous, do not scrape visual cards. Export/copy the dashboard table to CSV and use the manual review path:
 
@@ -375,7 +375,7 @@ python -m app.cli ingest-edchoice-universal-school-choice `
   --existing-csv ".\output\policies.csv"
 ```
 
-Primary qualification remains dashboard `Universal=Full`. In automatic fallback mode, the Universal School Choice page supplies equivalent first-party classification evidence using the rule above. `Eligibility`, `N/A`, and other dashboard values are not broadened into Universal School Choice.
+Primary qualification is dashboard `Universal=Full` **or** `Universal=Eligibility`. In automatic fallback mode, the Universal School Choice page supplies equivalent first-party evidence from its **Universal Eligibility** section. `N/A` and other non-qualifying dashboard values remain excluded.
 
 Generated artifacts:
 
@@ -423,4 +423,4 @@ python -m app.cli ingest-edchoice-universal-school-choice --existing-csv ".\outp
 pytest -q
 ```
 
-The first command refreshes the reviewed MultiState snapshot outputs. The second refreshes AI Laws by State. The third reviews EdChoice Universal School Choice records, preferring dashboard `Universal=Full` and automatically using the first-party universality-page fallback when needed. Both additive-source commands compare incoming records against the supplied current structured-policy snapshot and never write to Supabase. Review `validation.json`, `policies_review.csv`, the `ai_laws_education_*` files, and the `edchoice_universal_school_choice_*` files before any manual load.
+The first command refreshes the reviewed MultiState snapshot outputs. The second refreshes AI Laws by State. The third reviews EdChoice Universal School Choice records, accepting dashboard `Universal=Full` and `Universal=Eligibility` and automatically using the first-party Universal Eligibility section as the fallback when needed. Both additive-source commands compare incoming records against the supplied current structured-policy snapshot and never write to Supabase. Review `validation.json`, `policies_review.csv`, the `ai_laws_education_*` files, and the `edchoice_universal_school_choice_*` files before any manual load.
