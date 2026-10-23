@@ -20,10 +20,7 @@ from app.normalize import (
 DASH_RE = re.compile(r"\s+[–—-]\s+")
 BILL_LINK_RE = re.compile(r"\b(?:HB|SB|AB|A|S)\s*\.?\s*\d+\b", re.I)
 
-# Source-specific enrichment keeps the full policy meaning from Julia's article
-# without copying the article's prose verbatim into the Frontier database.
-# The primary category always matches the MultiState section; additional categories
-# are added only when the source explicitly supports them.
+
 ENRICHMENTS = {
     ("ID", "SB 1227"): {
         "summary": "Creates a statewide K-12 AI framework requiring local AI-use policies, AI literacy standards, educator training and data-privacy safeguards, while prohibiting AI from replacing human teachers.",

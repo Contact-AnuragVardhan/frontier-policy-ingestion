@@ -65,8 +65,7 @@ def _load_existing_records(existing_csv: Path | None):
     if default_csv.exists():
         return _records_from_db_csv(default_csv), str(default_csv), "default_output_csv"
 
-    # The bundled MultiState fixture is the approved source snapshot shipped with this
-    # archive. Using it is explicit in the report so it is never mistaken for a live DB read.
+
     return (
         load_multistate_fixture(config.FIXTURE_PATH),
         str(config.FIXTURE_PATH),
@@ -142,14 +141,13 @@ def run_ai_laws_ingestion(
 
     page_metadata = parse_tracker_page_metadata(tracker_html) if tracker_html else None
 
-    # Apply only documented post-review decisions. The generic parser stays conservative.
+
     candidates = apply_review_resolutions(candidates)
 
     existing_records, existing_source, existing_source_kind = _load_existing_records(existing_csv)
     candidates, duplicates, conflicts = classify_against_existing(candidates, existing_records)
 
-    # Validate only NEW records as production candidates. Duplicates are review-only and must not
-    # replace existing MultiState provenance. Possible matches and invalid rows are also review-only.
+
     new_records = [c.to_policy_record() for c in candidates if c.is_valid_for_db()]
     db_errors, db_summary = validate_records(new_records)
 
@@ -164,8 +162,8 @@ def run_ai_laws_ingestion(
 
     for candidate in candidates:
         if candidate.is_reviewed_exclusion():
-            # A reviewed exclusion remains visible in review artifacts but is intentionally
-            # out of the SQL candidate set, so it is not an unresolved validation blocker.
+
+
             continue
         if candidate.classification == "INVALID":
             details = candidate.issues + candidate.review_flags
@@ -197,7 +195,7 @@ def run_ai_laws_ingestion(
 
     raw_html_path = config.OUTPUT_DIR / "ai_laws_education_raw.html"
     raw_html_path.write_text(
-        tracker_html or "<!-- fixture mode: no raw tracker HTML bundled -->\n",
+        tracker_html or "",
         encoding="utf-8",
     )
     write_raw_json(config.OUTPUT_DIR / "ai_laws_education_raw.json", rows, fetch_log)
@@ -229,7 +227,7 @@ def run_ai_laws_ingestion(
         warnings=warnings,
     )
 
-    # Stop SQL generation on blocking validation errors. Remove any stale SQL from an older run.
+
     sql_path = config.OUTPUT_DIR / "ai_laws_education.sql"
     if validation_errors:
         if sql_path.exists():

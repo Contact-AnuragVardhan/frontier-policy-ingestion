@@ -24,11 +24,6 @@ def _url_key(value: str | None) -> str:
 
 
 def _existing_year(record: PolicyRecord) -> int | None:
-    """Return explicit bill/session-year evidence from the official source URL only.
-
-    The research source date is a snapshot/publication date, not the bill's year, so it
-    must never be used to distinguish reused bill identifiers.
-    """
     value = record.source_url or ""
     matches = re.findall(r"\b(20\d{2})\b", value)
     if matches:
@@ -42,9 +37,8 @@ def _same_known_legislative_session(state_code: str, first: int | None, second: 
     if first == second:
         return True
     low, high = sorted((first, second))
-    # Selected source systems identify an odd/even two-year session by its first
-    # year while the tracker may label an action with the second year. Keep the
-    # allow-list explicit rather than treating every one-year difference as safe.
+
+
     return state_code in {"NY", "WA", "CA"} and low % 2 == 1 and high == low + 1
 
 
@@ -158,10 +152,7 @@ def classify_against_existing(
         same_official_source = bool(incoming_url_key and existing_url_key and incoming_url_key == existing_url_key)
         existing_year = _existing_year(existing)
 
-        # state + normalized identifier is the primary identity. A conflicting year is
-        # escalated only when the existing official URL itself provides year evidence and
-        # the official URLs are not already the same record. This avoids mistaking a
-        # research-source snapshot date for a bill/session year.
+
         if (
             candidate.raw.year
             and existing_year

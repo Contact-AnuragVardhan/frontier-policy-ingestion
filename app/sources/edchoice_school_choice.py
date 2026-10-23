@@ -267,7 +267,7 @@ def parse_dashboard_html(html: str, page_url: str = SOURCE_URL) -> list[Dashboar
             continue
         values = [normalize_space(cell.get_text(" ", strip=True)) for cell in cells]
         if len(values) < len(headers):
-            # Some data-table plugins omit the leading checkbox header in body rows.
+
             nonempty_headers = [h for h in headers if h]
             if len(values) == len(nonempty_headers):
                 effective_headers = nonempty_headers
@@ -371,15 +371,6 @@ def _heading_by_text(soup: BeautifulSoup, tag: str, text: str) -> Tag | None:
 
 
 def _nodes_until_next_h2(heading: Tag) -> list[Tag]:
-    """Return tags after *heading* in document order until the next h2.
-
-    EdChoice's current WordPress markup nests section content in wrapper divs,
-    so the content following an h2 is not necessarily a direct sibling of the
-    h2 itself.  Walking only ``find_next_sibling`` therefore misses the live
-    Truly Universal state headings and program cards.  ``find_all_next``
-    follows document order across those wrappers while the next h2 remains a
-    reliable semantic section boundary.
-    """
     nodes: list[Tag] = []
     for node in heading.find_all_next(True):
         if node is heading:
@@ -391,13 +382,6 @@ def _nodes_until_next_h2(heading: Tag) -> list[Tag]:
 
 
 def _state_for_program_anchor(anchor: Tag, section_heading: Tag) -> str | None:
-    """Find the state label associated with a program link without relying on CSS classes.
-
-    EdChoice's Universal School Choice page is server-rendered, but the exact wrapper
-    classes are presentation details.  Walk from the program link through increasingly
-    larger ancestors and use an exact state-name text node when present.  Stop before
-    the section wrapper becomes broad enough to include multiple programs.
-    """
     node: Tag | None = anchor
     for _ in range(8):
         parent = node.parent if isinstance(node, Tag) else None
@@ -413,8 +397,7 @@ def _state_for_program_anchor(anchor: Tag, section_heading: Tag) -> str | None:
             break
         node = parent
 
-    # Fallback for flatter markup: scan backwards from the link until the section
-    # heading and take the nearest exact state label.
+
     for previous in anchor.find_all_previous():
         if previous is section_heading:
             break
@@ -506,15 +489,6 @@ def _is_qualifying_universal_value(value: str | None) -> bool:
 
 
 def parse_universal_school_choice_html(html: str, page_url: str = UNIVERSAL_SOURCE_URL) -> list[DashboardRow]:
-    """Extract EdChoice programs with universal eligibility.
-
-    This is the automatic fallback when the dashboard DataTable is populated only
-    client-side. EdChoice's Universal Eligibility section is the authoritative
-    fallback for programs available to all K-12 students, including programs that
-    automatically become universal after a phase-in period. Programs that also meet
-    EdChoice's Truly Universal standard (eligibility + options + funding) are marked
-    ``Full``; the remaining universal-eligibility programs are marked ``Eligibility``.
-    """
     soup = BeautifulSoup(html, "html.parser")
     true_states = set(_truly_universal_states(soup))
     eligibility = _programs_in_universal_section(soup, "Universal Eligibility", page_url)
@@ -605,14 +579,13 @@ def _is_official_government_url(url: str | None) -> bool:
         return False
     if host.endswith(".gov"):
         return True
-    # Some official state legislature sites use legacy state.xx.us domains.
+
     if re.search(r"(^|\.)(?:leg|legislature)\.state\.[a-z]{2}\.us$", host):
         return True
     return False
 
 
 def _section_anchors(heading: Tag) -> list[Tag]:
-    """Collect links in an h2 section across nested WordPress wrappers."""
     anchors: list[Tag] = []
     seen: set[int] = set()
     for node in _nodes_until_next_h2(heading):
@@ -674,7 +647,7 @@ def parse_detail_html(html: str, detail_url: str) -> DetailInfo:
         official_source_kind = "official_program_page"
 
     detail_last_updated = None
-    # Prefer the update date immediately following the universality block when exposed.
+
     for index, line in enumerate(lines):
         if line.lower().startswith("truly universal:"):
             for next_line in lines[index + 1:index + 5]:
@@ -716,10 +689,8 @@ def load_official_source_overrides(path: Path | None) -> dict[tuple[str, str], d
         state_key = state.lower()
         program_key = program.lower()
         result[(state_key, program_key)] = item
-        # EdChoice sometimes prefixes the state name on the program detail/
-        # universality page while the dashboard omits it (for example Arizona).
-        # Treat those source-title variants as aliases for the same reviewed
-        # official-source mapping.
+
+
         prefix = state_key + " "
         if program_key.startswith(prefix):
             result[(state_key, program_key[len(prefix):])] = item
@@ -780,12 +751,7 @@ def candidate_from_source(
         )
         return candidate
 
-    # The dashboard program name is the stable source identity. The detail-page H1,
-    # when present, is preferred as the display title because EdChoice sometimes
-    # prefixes the state name there (for example, Arizona).
-    # Prefer the EdChoice program-page H1 as the stable source identity.  This
-    # makes dashboard-table and Universal-page fallback runs converge on the
-    # same name even when the dashboard abbreviates the title.
+
     candidate.policy_identifier = normalize_space(detail.title or row.program_name)
     candidate.title = normalize_space(detail.title or row.program_name)
     candidate.summary = _summary_for(row, detail)
@@ -818,7 +784,7 @@ def candidate_from_source(
     if detail.truly_universal is True:
         detail_parts.append("EdChoice program page: Truly Universal")
     candidate.status_detail = "; ".join(detail_parts)
-    candidate.effective_date = None  # Never infer from enacted/launched year.
+    candidate.effective_date = None  
     if row.launched_year and detail.launched_year and row.launched_year != detail.launched_year:
         candidate.implementation_timeline = (
             f"EdChoice dashboard launch year: {row.launched_year}; "
@@ -851,7 +817,7 @@ def candidate_from_source(
     if detail.title:
         dashboard_key = re.sub(r"[^a-z0-9]+", "", normalize_space(row.program_name).lower())
         detail_key = re.sub(r"[^a-z0-9]+", "", normalize_space(detail.title).lower())
-        # EdChoice detail pages sometimes add the state name to the same program title.
+
         identity_matches = dashboard_key == detail_key or dashboard_key in detail_key or detail_key in dashboard_key
         if not identity_matches:
             candidate.review_flags.append(
@@ -919,7 +885,7 @@ def fetch_details_for_rows(
             info = parse_detail_html(html, row.program_url)
             details[key] = info
             fetch_log.append({"state": row.state_name, "program_name": row.program_name, "detail_url": row.program_url, "error": None, **info.as_dict()})
-        except Exception as exc:  # noqa: BLE001 - recorded for review; caller decides whether blocking.
+        except Exception as exc:  
             if not continue_on_error:
                 raise
             details[key] = DetailInfo()

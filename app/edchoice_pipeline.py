@@ -262,7 +262,7 @@ def run_edchoice_ingestion(
         rows = parse_dashboard_csv(input_csv.read_text(encoding="utf-8-sig"))
         details, detail_log = fetch_details_for_rows(rows, timeout=timeout, continue_on_error=True)
         source_date = source_date_override
-        dashboard_html = "<!-- manual CSV input; dashboard HTML not fetched -->\n"
+        dashboard_html = ""
         mode = "manual_csv"
         extraction_method = "manual_dashboard_csv"
     else:
@@ -337,10 +337,10 @@ def run_edchoice_ingestion(
     summary["extraction_method"] = extraction_method
 
     raw_html_path = config.OUTPUT_DIR / "edchoice_universal_school_choice_raw.html"
-    raw_html_path.write_text(dashboard_html or "<!-- fixture mode: no raw dashboard HTML bundled -->\n", encoding="utf-8")
+    raw_html_path.write_text(dashboard_html or "", encoding="utf-8")
     universal_raw_path = config.OUTPUT_DIR / "edchoice_universal_school_choice_universal_page_raw.html"
     universal_raw_path.write_text(
-        universal_html or "<!-- Universal School Choice fallback page was not used for this run -->\n",
+        universal_html or "",
         encoding="utf-8",
     )
     write_raw_json(config.OUTPUT_DIR / "edchoice_universal_school_choice_raw.json", rows, detail_log, source_date)
@@ -388,11 +388,8 @@ def run_edchoice_ingestion(
 
     sql_path = config.OUTPUT_DIR / "edchoice_universal_school_choice.sql"
     if validation_errors:
-        sql_path.write_text(
-            "-- SQL NOT GENERATED: blocking validation/review issues exist.\n"
-            "-- Review edchoice_universal_school_choice_validation.json and review CSV first.\n",
-            encoding="utf-8",
-        )
+        if sql_path.exists():
+            sql_path.unlink()
     else:
         write_sql(sql_path, new_records)
 

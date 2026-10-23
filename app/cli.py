@@ -83,7 +83,6 @@ def load_to_supabase(csv_path: Path, apply: bool) -> int:
     return 0
 
 
-
 def run_ai_laws_education(
     *,
     source_url: str | None = None,
@@ -100,7 +99,6 @@ def run_ai_laws_education(
         timeout=timeout,
     )
     return exit_code
-
 
 
 def run_edchoice_universal_school_choice(
@@ -134,7 +132,7 @@ def run_edchoice_universal_school_choice(
             file=sys.stderr,
         )
         return 1
-    except Exception as exc:  # requests/network errors can vary by installed urllib3/requests versions.
+    except Exception as exc:  
         print(f"EdChoice ingestion stopped before policy generation: {exc}", file=sys.stderr)
         print("No production Supabase write occurred; no source facts were invented.", file=sys.stderr)
         return 1

@@ -11,9 +11,6 @@ class IncludeResolution:
     note: str
 
 
-# These are deliberate post-review decisions made against the official source linked
-# by each tracker detail record. Keep them narrow and identifier-specific: this is not
-# a replacement for the generic category normalizer.
 VERIFIED_INCLUDES: dict[tuple[str, str], IncludeResolution] = {
     ("IL", "SB:1677"): IncludeResolution(
         ("AI Use",),
@@ -50,9 +47,6 @@ VERIFIED_INCLUDES: dict[tuple[str, str], IncludeResolution] = {
 }
 
 
-# These tracker rows were individually reviewed and do not support the tracker's
-# Teacher Use of AI / PD classification. They stay in review artifacts but are never
-# eligible for SQL.
 REVIEWED_EXCLUDES: dict[tuple[str, str], str] = {
     ("CT", "SB:325"): "Official-source review: record concerns public-record/address disclosure rather than classroom/teacher AI.",
     ("HI", "HR:202"): "Official-source review: detail/official record is unrelated to the tracker AI/PD characterization.",
@@ -69,11 +63,6 @@ TEACHER_REVIEW_ISSUE_PREFIXES = (
 )
 
 
-
-# Rows reviewed after the bill-identity/scope safety pass.  These are kept
-# identifier-specific on purpose: the generic safety gate remains conservative
-# for future tracker changes, while this list records the decisions from the
-# reviewed 2026-09-28 live snapshot.
 REVIEWED_IDENTITY_SCOPE_EXCLUDES: set[tuple[str, str]] = {
     ("CA", "SB:903"),
     ("CA", "AB:1979"),
@@ -109,31 +98,27 @@ REVIEWED_IDENTITY_SCOPE_EXCLUDES: set[tuple[str, str]] = {
     ("VT", "H:929"),
     ("VA", "SB:269"),
     ("VA", "HB:668"),
-    # K-12 scope exclusions verified after reviewing the final SQL candidate set.
+
     ("CA", "AB:1651"),
     ("CA", "AB:2392"),
     ("CA", "AB:2504"),
     ("IL", "HB:1859"),
     ("VA", "HJR:32"),
-    # Additional reused-bill-number/session collisions verified after the final SQL
-    # review.  In each case the Education AI Tracker row and AI Laws detail page /
-    # official source resolve to different legislative sessions or subjects.
+
+
     ("TN", "HB:1455"),
     ("TX", "HB:2400"),
     ("WA", "SB:6254"),
 }
 
-# Reviewed cases where the bill number was reused across legislative sessions and
-# the tracker/detail source resolved to the wrong session/subject. These remain
-# explicit because the tracker "Year" field is not reliable session evidence.
+
 VERIFIED_REUSED_SESSION_COLLISIONS: set[tuple[str, str]] = {
     ("TN", "HB:1455"),
     ("TX", "HB:2400"),
     ("WA", "SB:6254"),
 }
 
-# Reviewed records that are genuinely education-related but outside AI Choice's
-# K-12 EdTech Map scope (for example, postsecondary-only or professional licensing).
+
 VERIFIED_K12_SCOPE_EXCLUDES: set[tuple[str, str]] = {
     ("CA", "AB:1651"),
     ("CA", "AB:2392"),
@@ -163,13 +148,6 @@ def _clear_teacher_mapping_issues(candidate: Candidate) -> None:
 
 
 def apply_review_resolutions(candidates: list[Candidate]) -> list[Candidate]:
-    """Apply explicit post-review dispositions without hiding the original evidence.
-
-    The generic parser remains conservative. This layer only applies documented,
-    identifier-specific decisions and safe exclusion rules. Excluded rows retain their
-    original classification/evidence in the review artifacts but are not treated as
-    unresolved blockers for generating SQL for independently clean NEW records.
-    """
     for candidate in candidates:
         identity = _identity(candidate)
 

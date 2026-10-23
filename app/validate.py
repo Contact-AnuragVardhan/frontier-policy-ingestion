@@ -37,8 +37,8 @@ def _valid_iso_timestamp(value: str | None) -> bool:
         datetime.fromisoformat(value.replace("Z", "+00:00"))
         return True
     except (TypeError, ValueError):
-        # A source-supported calendar date is also accepted for timestamptz; Postgres
-        # will interpret it at midnight when the SQL is reviewed/imported.
+
+
         return _valid_iso_date(value)
 
 

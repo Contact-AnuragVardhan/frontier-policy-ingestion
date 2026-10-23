@@ -13,7 +13,7 @@ def test_parser_reads_companion_bills_and_preserves_detailed_status():
       </ul>
     </body></html>
     """
-    # parse_html deliberately refuses partial source coverage, so verify that safety guard fires.
+
     try:
         parse_html(html, "https://example.com/source", "2026-04-09")
     except ValueError as exc:

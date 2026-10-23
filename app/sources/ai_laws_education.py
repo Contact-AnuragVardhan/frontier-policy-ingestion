@@ -33,7 +33,7 @@ PENDING_STATUSES = {
     "in committee",
     "passed one chamber",
     "passed both chambers",
-    # Defensive compatibility with source wording seen in older snapshots.
+
     "passed 1st chamber",
     "passed 2nd chamber",
 }
@@ -68,8 +68,6 @@ class TrackerRow:
 
     def raw_dict(self) -> dict:
         return asdict(self)
-
-
 
 
 @dataclass(frozen=True)
@@ -135,10 +133,8 @@ class Candidate:
         return any(not flag.startswith("WARNING:") for flag in self.review_flags)
 
     def is_valid_for_db(self) -> bool:
-        # Only NEW records are eligible for generated SQL. Existing matches and
-        # possible matches are review-only so existing provenance is never overwritten.
-        # Non-blocking source-alignment warnings remain visible in review output but do
-        # not by themselves make an otherwise valid record un-loadable.
+
+
         return (
             not self.is_reviewed_exclusion()
             and not self.issues
@@ -303,14 +299,7 @@ def parse_tracker_html(html: str, page_url: str = SOURCE_URL) -> list[TrackerRow
     return rows
 
 
-
-
 def parse_tracker_page_metadata(html: str) -> TrackerPageMetadata:
-    """Extract source-declared live counts when the page exposes them.
-
-    These values are validation aids only; they are never hardcoded or used as the
-    authoritative dataset.
-    """
     soup = BeautifulSoup(html, "html.parser")
     text = normalize_space(soup.get_text(" ", strip=True))
 
@@ -351,14 +340,14 @@ def _date_to_iso(value: str | None) -> str | None:
 
 def _extract_label_value(soup: BeautifulSoup, label: str) -> str | None:
     target = label.strip().lower()
-    # The detail page renders record labels as ordinary text followed by a value.
+
     for text_node in soup.find_all(string=True):
         if normalize_space(str(text_node)).lower() != target:
             continue
         parent = text_node.parent
         if parent is None:
             continue
-        # Prefer the next sibling/element text after the label container.
+
         for sibling in parent.next_siblings:
             if isinstance(sibling, Tag):
                 value = normalize_space(sibling.get_text(" ", strip=True))
@@ -409,7 +398,7 @@ def parse_detail_html(html: str, detail_url: str) -> DetailInfo:
                 break
 
     fields = _extract_record_fields_by_text(soup)
-    # Fallback to semantic label search for layouts that do not flatten cleanly.
+
     source_status = fields.get("status") or _extract_label_value(soup, "Status")
     last_action = fields.get("last_action") or _extract_label_value(soup, "Last action")
     last_verified = fields.get("last_verified") or _extract_label_value(soup, "Last verified")
@@ -477,9 +466,9 @@ def _has_ai_signal(text: str) -> bool:
             text,
             (
                 "artificial intelligence",
-                "artificial intell",  # source headings can be visibly truncated
-                "artificial intel",   # truncation before the final "ligence"
-                "artifical intelligence",  # common source typo
+                "artificial intell",  
+                "artificial intel",   
+                "artifical intelligence",  
                 "generative ai",
                 "chatbot",
                 "chat bot",
@@ -504,7 +493,7 @@ def _has_education_signal(text: str) -> bool:
             "teacher",
             "educator",
             "education",
-            "eduaction",  # source typo seen in public bill titles
+            "eduaction",  
             "educ-",
             "curriculum",
             "classroom",
@@ -540,7 +529,7 @@ def _has_k12_signal(text: str) -> bool:
         ),
     ):
         return True
-    # Word-boundary check avoids treating 'postsecondary' as a K-12 signal.
+
     return bool(re.search(r"\bsecondary\b", normalized))
 
 
@@ -620,9 +609,7 @@ def categories_for_source(
             ("professional development", "teacher training", "educator training", "training requirement"),
         )
 
-        # The tracker currently uses a generic either/or Key Requirement for many rows.
-        # Use the source-supported detail title as a second signal rather than blindly
-        # assigning both categories. This keeps the decision deterministic and reviewable.
+
         generic_either_or = supports_use and supports_learning and " or " in requirement.lower()
         if generic_either_or:
             categories.clear()
@@ -647,9 +634,7 @@ def categories_for_source(
                 ),
             )
 
-            # Stay within the source category's own semantics. A title that points to a
-            # different topic (for example school biometrics/privacy) is evidence of a
-            # possible source mismatch, not permission to silently recategorize the row.
+
             if title_ai and title_use and title_pd:
                 categories.extend(("AI Use", "AI Literacy"))
             elif title_ai and title_use:
@@ -685,7 +670,6 @@ def categories_for_source(
     return primary, tuple(categories), issues
 
 
-
 IDENTITY_CORE_DOMAINS = {"AI", "EDUCATION", "PRIVACY"}
 IDENTITY_OFF_DOMAIN_PATTERNS: dict[str, tuple[str, ...]] = {
     "HEALTH": (
@@ -719,14 +703,13 @@ IDENTITY_TOKEN_STOPWORDS = {
 
 
 def _detail_slug_text(detail_url: str | None) -> str:
-    """Return the human-readable title portion encoded in an AI Laws detail URL."""
     if not detail_url:
         return ""
     path = urlparse(detail_url).path.rstrip("/")
     slug = path.split("/")[-1] if path else ""
     text = normalize_space(slug.replace("-", " "))
-    # The first slug component normally repeats the bill identifier. Remove only that
-    # prefix; keep all remaining wording because it is useful identity evidence.
+
+
     text = re.sub(
         r"^(?:HB|SB|AB|HR|SR|SCR|HCR|LD|H|S|A|B)\s*0*\d+\s+",
         "",
@@ -738,7 +721,7 @@ def _detail_slug_text(detail_url: str | None) -> str:
 
 def _official_title_text(title: str | None) -> str:
     text = normalize_space(title or "")
-    # AI Laws detail headings often prefix the official title with STATE + BILL ID.
+
     return normalize_space(
         re.sub(
             r"^[A-Z]{2}\s+(?:HB|SB|AB|HR|SR|SCR|HCR|LD|H|S|A|B)\s*0*\d+\s*:\s*",
@@ -776,14 +759,6 @@ def _identity_domains(text: str) -> set[str]:
 
 
 def bill_identity_review_flags(row: TrackerRow, detail: DetailInfo) -> list[str]:
-    """Cross-check AI Laws detail identity against the enriched official title.
-
-    The tracker can contain a correct bill number paired with stale/wrong detail metadata
-    from a different legislative session. We therefore compare the title encoded in the
-    AI Laws detail URL with the official-government title extracted from the detail page.
-    This is a conservative review gate: it does not decide legal substance and it does
-    not automatically exclude the row.
-    """
     title = _official_title_text(detail.title)
     slug_title = _detail_slug_text(row.research_record_url)
     if not title or not slug_title:
@@ -802,10 +777,7 @@ def bill_identity_review_flags(row: TrackerRow, detail: DetailInfo) -> list[str]
 
     flags: list[str] = []
 
-    # High-confidence collision: the two titles have no meaningful vocabulary in common
-    # and one/both point to different non-education subject matter. This catches reused
-    # bill numbers/session collisions such as "school choice" vs "political advertising"
-    # without penalizing a legitimate "AI" title paired with an "education" slug.
+
     if not shared_tokens and (title_off_domains or slug_off_domains):
         if not (title_off_domains & slug_off_domains):
             flags.append(
@@ -813,10 +785,7 @@ def bill_identity_review_flags(row: TrackerRow, detail: DetailInfo) -> list[str]
                 "have no meaningful topic overlap and point to different subject matter"
             )
 
-    # Student-privacy records can be especially vulnerable to a reused bill number. If
-    # one side is plainly education-only while the other is privacy/biometric-only and
-    # there is no lexical overlap, require review. AI<->education wording by itself is
-    # intentionally allowed because that is common for genuine Education AI bills.
+
     if not shared_tokens and not flags:
         education_only_side = (
             "EDUCATION" in title_domains
@@ -835,9 +804,7 @@ def bill_identity_review_flags(row: TrackerRow, detail: DetailInfo) -> list[str]
                 "do not align for the same bill number"
             )
 
-    # Scope guard: even when the AI Laws slug and official title agree with each other,
-    # a strong non-education subject in the official title should not silently enter the
-    # Education AI map merely because it contains AI/privacy wording.
+
     generic_education_requirement = normalize_space(row.key_requirement).lower() in {
         "requires ai literacy education or curriculum standards",
         "regulates generative ai use in educational settings",
@@ -856,10 +823,7 @@ def bill_identity_review_flags(row: TrackerRow, detail: DetailInfo) -> list[str]
             f"({', '.join(sorted(title_off_domains))})"
         )
 
-    # AI Choice's EdTech Map is K-12. A tracker row that is plainly limited to
-    # postsecondary/higher education should not enter the map merely because the
-    # external tracker labels it as education. Mixed K-12 + higher-ed bills remain
-    # eligible when the title contains an explicit K-12/school signal.
+
     if (
         generic_education_requirement
         and _has_postsecondary_signal(title)
@@ -878,9 +842,8 @@ def _years_share_known_session(state_name: str, first: int, second: int) -> bool
     if first == second:
         return True
     low, high = sorted((first, second))
-    # These source URLs commonly identify the first year of an odd/even two-year
-    # legislative session while tracker rows can be labelled with the second year.
-    # Keep the allow-list explicit instead of assuming every state is biennial.
+
+
     return (
         normalize_space(state_name) in {"New York", "Washington", "California"}
         and low % 2 == 1
@@ -889,12 +852,6 @@ def _years_share_known_session(state_name: str, first: int, second: int) -> bool
 
 
 def source_consistency_review_flags(row: TrackerRow, detail: DetailInfo) -> list[str]:
-    """Return non-fatal source-alignment concerns that must be reviewed before SQL.
-
-    These are deliberately conservative review flags, not claims that a source is wrong.
-    They protect production from tracker/detail joins that are structurally valid but may
-    describe an unrelated bill.
-    """
     flags: list[str] = []
     title = normalize_space(detail.title or "")
     official_url = normalize_space(detail.official_source_url or "")
@@ -913,9 +870,8 @@ def source_consistency_review_flags(row: TrackerRow, detail: DetailInfo) -> list
         return flags
 
     requirement = normalize_space(row.key_requirement).lower()
-    # Title relevance is a guardrail, not a semantic legal classifier. Many valid
-    # omnibus bills have broad titles, so block only when the detail title has no
-    # visible signal at all for the tracker's education/AI/privacy subject matter.
+
+
     relevant_signal = _has_ai_signal(title) or _has_education_signal(title) or _has_privacy_signal(title)
     if requirement in {
         "requires ai literacy education or curriculum standards",
@@ -940,8 +896,8 @@ def candidate_from_source(row: TrackerRow, detail: DetailInfo, tracker_url: str 
         candidate.issues.append("Federal record is outside the state/DC EdTech Map jurisdiction model")
     else:
         try:
-            # Keep the existing shared MultiState normalization untouched.
-            # DC support belongs to this new source adapter only.
+
+
             candidate.state_code = (
                 "DC"
                 if normalize_space(row.state_name) == "District of Columbia"
@@ -971,8 +927,7 @@ def candidate_from_source(row: TrackerRow, detail: DetailInfo, tracker_url: str 
     elif candidate.status not in ALLOWED_STATUS_GROUPS:
         candidate.issues.append(f"Mapped status is not supported by production schema: {candidate.status}")
 
-    # The tracker rows are legislative records. Do not relabel an enacted bill as a law
-    # unless the source itself explicitly identifies it as a statute/law.
+
     identifier_label = normalize_space(row.identifier_raw).lower()
     candidate.policy_type = "Law" if "statute" in identifier_label else "Bill"
 
@@ -989,9 +944,8 @@ def candidate_from_source(row: TrackerRow, detail: DetailInfo, tracker_url: str 
         candidate.issues.append("source_url points to the research aggregator instead of an official source")
 
     candidate.research_source_date = detail.data_updated_date or detail.last_verified_date
-    # Use the most recent source-supported freshness signal. On the live tracker,
-    # Data Updated can legitimately be later than Last Verified when a bill status has
-    # moved since the last separate verification timestamp.
+
+
     freshness_dates = [d for d in (detail.data_updated_date, detail.last_verified_date) if d]
     candidate.status_as_of_date = max(freshness_dates) if freshness_dates else None
     candidate.last_updated = detail.data_updated_date or detail.last_verified_date
@@ -1001,8 +955,7 @@ def candidate_from_source(row: TrackerRow, detail: DetailInfo, tracker_url: str 
     if not candidate.last_updated:
         candidate.issues.append("No source-supported Data Updated/Last Verified date is available for last_updated")
 
-    # Never infer effective dates from year, last action, publication, or tracker update dates.
-    # Populate only when the public detail record explicitly exposes an Effective date.
+
     candidate.effective_date = detail.effective_date
     candidate.implementation_timeline = None
 
@@ -1030,7 +983,7 @@ def fetch_details_for_rows(
             try:
                 html = fetch_html(row.research_record_url, timeout=timeout, session=session)
                 detail = parse_detail_html(html, row.research_record_url)
-            except Exception as exc:  # review-only pipeline should preserve row and flag it
+            except Exception as exc:  
                 error = f"{type(exc).__name__}: {exc}"
                 if not continue_on_error:
                     raise

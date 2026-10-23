@@ -251,8 +251,8 @@ def test_explicit_effective_date_is_preserved_but_not_inferred():
 
 def test_research_snapshot_date_is_not_used_as_existing_bill_year():
     existing = load_fixture(config.FIXTURE_PATH)
-    # IL SB 3735 has no explicit four-digit year in its official URL. The MultiState
-    # research snapshot date is 2026-04-09 and must not be treated as bill-year evidence.
+
+
     current = next(r for r in existing if r.state_code == "IL" and r.policy_identifier == "SB 3735")
     row = TrackerRow(
         state_name="Illinois",
@@ -511,7 +511,6 @@ def test_chatbot_title_counts_as_ai_signal_for_source_consistency_guard():
     )
     candidate = candidate_from_source(row, detail)
     assert not any("no obvious AI" in flag for flag in candidate.review_flags)
-
 
 
 def test_bill_identity_gate_flags_school_choice_vs_political_advertising_collision():
@@ -775,7 +774,7 @@ def test_pipeline_generates_sql_for_clean_subset_when_all_review_rows_have_resol
     from app.ai_laws_pipeline import run_ai_laws_ingestion
 
     fixture = {
-        "tracker_html": "<!-- post-review integration fixture -->",
+        "tracker_html": "",
         "records": [
             {
                 "row": {
@@ -874,7 +873,7 @@ def test_pipeline_blocks_sql_for_unresolved_bill_identity_collision(tmp_path, mo
     from app.ai_laws_pipeline import run_ai_laws_ingestion
 
     fixture = {
-        "tracker_html": "<!-- identity collision fixture -->",
+        "tracker_html": "",
         "records": [
             {
                 "row": {
